@@ -1,0 +1,31 @@
+.header {
+  position: fixed; /* Change to fixed to overlap the profile container */
+  top: 0; /* Align to the top */
+  left: 0; /* Align to the left */
+  width: 100%; /* Full width */
+  height: 50px; /* Reduced height */
+  display: flex;
+  align-items: center;
+  z-index: 10;
+}
+
+.header .logo {
+  display: flex;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  transition: color 1.8s ease-in-out;
+}
+
+.header .logo img {
+  width: 30px;
+  height: 30px;
+  margin-right: 10px;
+}
+
+.nav-links {
+  margin-left: auto; /* Push links to the right */
+  display: flex;
+  gap: 20px;
+}

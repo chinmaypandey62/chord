@@ -1,0 +1,21 @@
+:root {
+  --white: #fff;
+  --black: #060606;
+  --grey: #616160;
+  --lightGrey: #f0f0f0;
+  --darkGrey: #333;
+  --placeholderGrey: #aaa;
+  --borderGrey: #acacac;
+  --gradientStart: #060606;
+  --gradientEnd: #616160;
+  --titleFontSize: 2.2rem;
+  --inputHeight: 55px;
+  --inputFontSize: 1.1rem;
+  --btnWidth: 150px;
+  --btnHeight: 49px;
+  --btnBorderRadius: 4px;
+  --socialIconSize: 46px;
+  --panelFontSize: 1.5rem;
+  --panelParagraphFontSize: 0.95rem;
+  --transitionDelay: 0.7s;
+}
