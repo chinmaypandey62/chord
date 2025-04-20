@@ -1,0 +1,214 @@
+.dashboard-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dashboard-container {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  padding-top: 2.5rem; /* Increased top padding for more space after navbar */
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--foreground));
+  position: relative;
+  display: inline-block;
+}
+
+.dashboard-header h1::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background-color: hsl(var(--primary));
+  border-radius: 1.5px;
+}
+
+.dashboard-search {
+  margin-bottom: 2rem;
+}
+
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+.friends-section,
+.recent-chats-section {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.recent-chats-section {
+  height: 100%;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.section-header h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  position: relative;
+  display: inline-block;
+}
+
+.section-header h2::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 30px;
+  height: 2px;
+  background-color: hsl(var(--primary) / 0.7);
+  border-radius: 1px;
+}
+
+.friends-grid {
+  display: grid;
+  /* Use auto-fit to create as many columns as fit, with a minimum width */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Increased min-width */
+  gap: 1.5rem; /* Increased gap */
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid hsl(var(--border));
+}
+
+.loading-state {
+  color: hsl(var(--muted-foreground));
+}
+
+.error-state {
+  color: hsl(var(--destructive));
+}
+
+.error-state button {
+  margin-top: 1rem;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.empty-state p {
+  margin-bottom: 0.5rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.empty-state button {
+  margin-top: 0.5rem;
+}
+
+.coming-soon-card {
+  padding: 2rem;
+  text-align: center;
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 2px dashed hsl(var(--border));
+  background-image: linear-gradient(
+    to bottom right,
+    hsl(var(--card)),
+    hsl(var(--accent) / 0.05)
+  );
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.coming-soon-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--primary));
+}
+
+.coming-soon-card p {
+  color: hsl(var(--muted-foreground));
+}
+
+.video-call-placeholder {
+  margin-top: 2rem;
+  padding: 3rem 2rem;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));
+  color: hsl(var(--primary-foreground));
+  border-radius: var(--radius);
+  text-align: center;
+  box-shadow: 0 8px 16px hsl(var(--primary) / 0.2);
+}
+
+.placeholder-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.placeholder-content p {
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+}
+
+.placeholder-content .btn-secondary {
+  background-color: white;
+  color: var(--primary-color);
+}
+
+.placeholder-content .btn-secondary:hover {
+  background-color: var(--bg-light);
+}
+
+@media (min-width: 768px) {
+  .dashboard-content {
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem; /* Ensure consistent gap */
+  }
+}
+
+@media (min-width: 1024px) {
+}
+
+@media (min-width: 1280px) {
+  /* Example: You might want to limit the max columns or adjust grid further */
+  /* .friends-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  } */
+}

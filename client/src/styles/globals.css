@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Subtle neutral background */
+    --background: 220 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    /* More subtle primary color - softer purple */
+    --primary: 262 60% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Soft secondary for subtle elements */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 47% 11.2%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 8% 46%;
+
+    /* Subtle accent color */
+    --accent: 262 30% 95%;
+    --accent-foreground: 262 60% 50%;
+
+    /* Destructive red */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Success green */
+    --success: 142 70% 45%;
+    --success-foreground: 210 40% 98%;
+
+    /* Clean border colors */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 262 60% 55%;
+
+    --radius: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-sm: 0.375rem;
+    
+    /* Subtle border settings */
+    --border-width: 1px;
+    --box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark {
+    /* Deep blue-black background - matching screenshot */
+    --background: 224 70% 3%;
+    --foreground: 210 20% 98%;
+
+    --card: 224 70% 5%;
+    --card-foreground: 210 20% 98%;
+
+    /* Softer purple in dark mode - matching screenshot */
+    --primary: 263 70% 65%;
+    --primary-foreground: 210 20% 98%;
+
+    /* Darker secondary for subtlety */
+    --secondary: 215 28% 15%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 215 28% 15%;
+    --muted-foreground: 217 10% 65%;
+
+    /* Accent color */
+    --accent: 263 30% 20%;
+    --accent-foreground: 210 20% 98%;
+
+    /* Destructive red */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+
+    /* Subtle borders in dark mode */
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 263 70% 50%;
+    
+    /* Subtle shadow */
+    --box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  
+  /* Smooth transitions */
+  * {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+}

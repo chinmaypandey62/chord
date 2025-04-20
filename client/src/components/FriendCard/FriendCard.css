@@ -1,0 +1,144 @@
+.friend-card {
+  display: flex;
+  align-items: center; /* Keep vertical alignment centered */
+  padding: 1rem; /* Revert padding slightly if 1.25rem was too much */
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease;
+  /* min-height: 90px; */ /* Remove or comment out min-height */
+  gap: 1rem; /* Add gap between avatar, info, and actions */
+}
+
+.friend-card:hover {
+  transform: translateY(-2px);
+}
+
+.friend-avatar {
+  position: relative;
+  width: 3rem;
+  height: 3rem;
+  margin-right: 1rem;
+}
+
+.friend-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: bold;
+  font-size: 1.25rem;
+  border-radius: 50%;
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.status-indicator.online {
+  background-color: var(--success-color);
+}
+
+.status-indicator.away {
+  background-color: var(--secondary-color);
+}
+
+.status-indicator.offline {
+  background-color: var(--text-light);
+}
+
+.friend-info {
+  flex-grow: 1; /* Ensure this section grows to push actions */
+  flex-shrink: 1; /* Allow shrinking if needed */
+  min-width: 0; /* Prevent overflow issues */
+  text-align: left; /* Ensure text aligns left */
+}
+
+.friend-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.friend-status {
+  margin: 0;
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap; /* Prevent status text wrapping */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friend-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center; /* Keep vertical alignment */
+  flex-shrink: 0; /* Prevent actions container from shrinking */
+}
+
+/* Add styles for icon buttons */
+.friend-actions .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; /* Fixed width */
+  height: 36px; /* Fixed height */
+  padding: 0; /* Remove padding */
+  border-radius: 50%; /* Make buttons circular */
+  font-size: 1rem; /* Adjust icon size if needed via size prop */
+  line-height: 1; /* Ensure icon is centered vertically */
+  transition: background-color 0.2s ease; /* Add transition */
+}
+
+/* Specific colors for icon buttons */
+.friend-actions .btn-icon.btn-primary {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  margin-bottom: 17px;
+}
+.friend-actions .btn-icon.btn-primary:hover {
+  background-color: hsl(var(--primary) / 0.9);
+}
+.friend-actions .btn-icon.btn-primary:disabled {
+  background-color: hsl(var(--primary) / 0.5);
+  cursor: not-allowed;
+}
+
+.friend-actions .btn-icon.btn-secondary {
+  background-color: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+}
+.friend-actions .btn-icon.btn-secondary:hover {
+  background-color: hsl(var(--secondary) / 0.9);
+}
+
+@media (max-width: 640px) {
+  /* Optional: Keep some mobile adjustments if needed, like slightly smaller gaps or font sizes */
+  .friend-card {
+     gap: 0.75rem; /* Slightly smaller gap on mobile */
+  }
+   .friend-actions {
+     gap: 0.4rem; /* Slightly smaller gap between buttons on mobile */
+   }
+}

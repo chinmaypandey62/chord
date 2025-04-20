@@ -1,0 +1,624 @@
+/* Main container styling */
+.chat-room-page {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  /* Remove padding-bottom to use full viewport height */
+  padding-bottom: 0;
+}
+
+/* Updated main content area wrapper to use full height */
+.chat-room-main-content {
+  flex: 1;
+  display: flex; 
+  flex-direction: column; 
+  padding: 1rem;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+  height: calc(100vh - 60px);
+}
+
+/* Desktop layout container */
+.desktop-layout {
+  display: none;
+  flex: 1;
+  min-height: 0;
+}
+
+.desktop-layout .chat-room-content {
+  display: flex;
+  flex: 1;
+  gap: 1.25rem;
+  padding: 0;
+  min-height: 0;
+  height: 100%; /* Ensure the content takes full height */
+}
+
+/* Left panel styling with better vertical spacing */
+.desktop-layout .chat-left-panel {
+  flex: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  border: var(--border-width) solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  position: relative;
+  background-color: hsl(var(--card));
+  box-shadow: var(--box-shadow);
+  height: 100%; /* Ensure the panel takes full height */
+}
+
+/* Desktop video call area */
+.desktop-video-call-area {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: var(--border-width) solid hsl(var(--border));
+  border-radius: var(--radius);
+  background-color: hsl(var(--card));
+  position: relative;
+}
+
+/* Participant video container styling */
+.participant-videos-container {
+  flex-grow: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  padding-bottom: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: hsla(var(--primary), 0.3) transparent;
+  -ms-overflow-style: none;
+}
+
+/* Custom scrollbar styling */
+.participant-videos-container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.participant-videos-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.participant-videos-container::-webkit-scrollbar-thumb {
+  background-color: hsla(var(--primary), 0.3);
+  border-radius: 10px;
+}
+
+/* Participant video item styling */
+.participant-video-item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 1rem;
+  vertical-align: top;
+  width: 140px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+/* Participant video placeholder */
+.participant-video-placeholder {
+  position: relative;
+  width: 120px;
+  height: 90px;
+  background-color: hsla(var(--muted), 0.3);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+
+/* Online indicator styling */
+.online-indicator {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background-color: hsl(var(--success));
+  border: 1px solid white;
+  border-radius: 50%;
+}
+
+/* Username styling */
+.participant-video-username {
+  font-size: 0.85rem;
+  color: hsl(var(--foreground));
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  margin-top: 0.3rem;
+}
+
+/* Call controls styling */
+.call-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.call-controls-top-row {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Button styling */
+.call-controls .btn-icon {
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-grow: 1;
+  max-width: calc(50% - 0.3rem);
+}
+
+/* Mic and camera buttons */
+.call-controls .btn-mic,
+.call-controls .btn-cam {
+  background-color: hsl(175 70% 41%);
+  color: white;
+}
+
+.call-controls .btn-mic:hover,
+.call-controls .btn-cam:hover {
+  background-color: hsl(175 70% 36%);
+}
+
+/* Hang up button */
+.call-controls .btn-hangup {
+  background-color: hsl(0 80% 55%);
+  color: white;
+  width: 100%;
+  max-width: none;
+}
+
+.call-controls .btn-hangup:hover {
+  background-color: hsl(0 80% 50%);
+}
+
+/* YouTube video area styling with flex-grow to take more space */
+.desktop-layout .youtube-video-area {
+  flex: 1;
+  min-height: 0;
+  border: var(--border-width) solid hsl(var(--border));
+  border-radius: var(--radius);
+  position: relative;
+  box-shadow: var(--box-shadow);
+  overflow: hidden;
+  background-color: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Add a now playing info bar at the bottom of video area */
+.video-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background-color: hsla(var(--muted), 0.6);
+  border-top: var(--border-width) solid hsl(var(--border));
+  margin-top: auto; /* Push to bottom of container */
+}
+
+.video-info-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 70%;
+}
+
+.video-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background-color: hsl(var(--muted));
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.video-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-title-container {
+  overflow: hidden;
+}
+
+.video-title {
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+}
+
+.video-channel {
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.video-info-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.video-viewers {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.viewer-count {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+
+.video-action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.video-action-button {
+  background-color: transparent;
+  border: none;
+  padding: 0.4rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: hsl(var(--foreground));
+  transition: all 0.2s ease;
+}
+
+.video-action-button:hover {
+  background-color: hsla(var(--muted), 0.8);
+}
+
+/* Right panel styling with better vertical spacing */
+.desktop-layout .chat-right-panel {
+  flex: 1;
+  min-width: 300px;
+  max-width: 450px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: var(--border-width) solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  position: relative;
+  background-color: hsl(var(--card));
+  box-shadow: var(--box-shadow);
+  height: 100%; /* Ensure the panel takes full height */
+}
+
+/* Video change form styling */
+.video-change-form {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  margin-bottom: 0.5rem;
+  background-color: hsl(var(--secondary) / 0.2);
+  border: var(--border-width) solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+/* Video URL input styling */
+.video-url-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  border: var(--border-width) solid hsl(var(--border));
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+}
+
+.video-url-input:focus {
+  outline: none;
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsla(var(--ring), 0.15);
+}
+
+/* Load button styling */
+.video-change-button {
+  padding: 0.5rem 1rem;
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.video-change-button:hover {
+  background-color: hsl(var(--primary) / 0.9);
+}
+
+/* Mobile panel switcher styling - fixed position at bottom */
+.mobile-panel-switcher {
+  display: none;
+  position: fixed;
+  max-width: 400px;
+  background-color: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 1.75rem;
+  height: 48px;
+  padding: 4px;
+  z-index: 100;
+  bottom: 1rem;
+  left: 5%;
+  right: 5%;
+  width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Switcher button styling */
+.switcher-button {
+  flex: 1;
+  height: 100%;
+  padding: 0 0.75rem;
+  background-color: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+  border-radius: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+}
+
+.switcher-button:hover {
+  color: hsl(var(--foreground));
+}
+
+.switcher-button.active {
+  color: white;
+  background-color: hsl(265, 89%, 78%);
+}
+
+/* Mobile layout styles */
+@media (max-width: 767px) {
+  .chat-room-main-content {
+    padding: 0.5rem;
+  }
+
+  .desktop-layout {
+    display: none;
+  }
+
+  .mobile-layout {
+    display: block;
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+    height: 100%; /* Ensure full height */
+  }
+
+  /* Mobile panel styling */
+  .mobile-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 60px; /* Add space for switcher bar */
+    height: calc(100% - 60px); /* Adjust height to account for switcher */
+    width: 100%;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-panel.active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 10;
+  }
+
+  /* Chat panel specific styling */
+  .mobile-panel.chat-panel {
+    padding-bottom: 0;
+  }
+
+  .mobile-panel.chat-panel .chat-box {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-panel.chat-panel .chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+  }
+
+  .mobile-panel.chat-panel .chat-input-form {
+    position: relative; /* Not fixed */
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    background-color: hsl(var(--card));
+  }
+
+  /* YouTube panel specific styling */
+  .mobile-panel.youtube-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    background-color: hsl(var(--background));
+  }
+
+  /* Video URL form for mobile */
+  .mobile-video-form {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    background-color: transparent;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.75rem;
+  }
+
+  .mobile-video-form .video-url-input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    background-color: transparent;
+    border: none;
+    font-size: 0.9rem;
+    outline: none;
+  }
+
+  .mobile-video-form .video-change-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    border-radius: 0.5rem;
+  }
+
+  /* Video aspect ratio wrapper */
+  .mobile-video-aspect-ratio-wrapper {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    background-color: #000;
+    border-radius: var(--radius);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .mobile-video-aspect-ratio-wrapper .video-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Mobile video info bar styling */
+  .mobile-video-aspect-ratio-wrapper .video-info-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
+
+  /* Mobile YouTube chat wrapper for portrait layout */
+  .mobile-youtube-chat-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-top: 0.75rem;
+    overflow: hidden;
+    min-height: 0; /* Needed for flexbox to work properly */
+  }
+
+  .mobile-youtube-chat-wrapper .chat-box {
+    height: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Needed for flexbox to work properly */
+  }
+
+  .mobile-youtube-chat-wrapper .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* Mobile panel switcher - fixed at bottom */
+  .mobile-panel-switcher {
+    display: flex !important;
+    position: fixed;
+    max-width: 400px;
+    background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    border-radius: 1.75rem;
+    height: 48px;
+    padding: 4px;
+    z-index: 100;
+    bottom: 1rem;
+    left: 5%;
+    right: 5%;
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Adjust switcher buttons for mobile */
+  .switcher-button {
+    border-radius: 1.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  .desktop-video-form {
+    display: none;
+  }
+  
+  .mobile-video-form {
+    display: flex;
+  }
+
+  /* Fix for call panel */
+  .mobile-panel.call-panel {
+    padding: 1rem;
+  }
+  
+  /* Ensure the participants list scrolls if needed */
+  .participants-list {
+    overflow-y: auto;
+    max-height: calc(100% - 100px); /* Allow space for button */
+  }
+}
+
+/* Desktop layout styles */
+@media (min-width: 768px) {
+  .desktop-layout {
+    display: flex;
+  }
+
+  .mobile-layout,
+  .mobile-panel-switcher {
+    display: none;
+  }
+  
+  .mobile-video-form {
+    display: none;
+  }
+}
