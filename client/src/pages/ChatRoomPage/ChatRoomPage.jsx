@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+// Import useLocation
+import { useParams, useNavigate, useLocation } from "react-router-dom"
 import axios from "../../utils/axios"
 import { useAuth } from "../../context/AuthContext"
 import { getSocket } from "../../utils/socket"
@@ -13,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avat
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
 import "./ChatRoomPage.css"
+import { Mic, MicOff, Video, VideoOff, PhoneOff, SwitchCamera } from "lucide-react" // Import icons
 
 // Helper function to format lastSeen
 const formatLastSeen = (dateString) => {
@@ -35,6 +37,7 @@ const ChatRoomPage = () => {
   const [error, setError] = useState(null)
   const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation() // Get location object
 
   const [videoInput, setVideoInput] = useState("")
   const [currentVideoId, setCurrentVideoId] = useState("dQw4w9WgXcQ")
@@ -59,12 +62,24 @@ const ChatRoomPage = () => {
   const [micEnabled, setMicEnabled] = useState(true)
   const [videoEnabled, setVideoEnabled] = useState(true)
 
-  // State for big screen participant
+  // State for big screen participant (Desktop)
   const [bigScreenParticipantId, setBigScreenParticipantId] = useState(null)
+  // State for mobile video view switching
+  const [isLocalVideoMain, setIsLocalVideoMain] = useState(false)
 
-  // Handler for double click
+  // Refs for mobile video elements
+  const mobileLocalVideoRef = useRef(null)
+  const mobileRemoteVideoRef = useRef(null)
+
+
+  // Handler for double click (Desktop)
   const handleParticipantVideoDoubleClick = (participantId) => {
     setBigScreenParticipantId(participantId)
+  }
+
+  // Handler for switching mobile video views
+  const handleSwitchVideoViews = () => {
+    setIsLocalVideoMain(prev => !prev)
   }
 
   // Helper to get participant object by id
@@ -93,6 +108,7 @@ const ChatRoomPage = () => {
     endCall()
     setMicEnabled(true)
     setVideoEnabled(true)
+    setIsLocalVideoMain(false) // Reset view on hangup
   }
 
   // Add ref for audio element
@@ -269,6 +285,7 @@ const ChatRoomPage = () => {
   const acceptCall = async () => {
     setCallIncoming(false)
     setCallActive(true)
+    setIsLocalVideoMain(false) // Ensure remote is main view initially
     const socket = getSocket()
     if (!socket || !remoteUser) {
       console.error("[VideoCall] Cannot accept call: Socket or remoteUser missing.");
@@ -338,6 +355,7 @@ const ChatRoomPage = () => {
     setCallIncoming(false)
     setRemoteUser(null)
     window._pendingOffer = null
+    setIsLocalVideoMain(false) // Reset view
     const socket = getSocket()
     if (socket && remoteUser) {
       socket.emit("call-hangup", { to: remoteUser })
@@ -393,6 +411,56 @@ const ChatRoomPage = () => {
 
     return pc
   }
+
+  // --- UseEffects ---
+
+  // New useEffect to handle automatic call initiation
+  useEffect(() => {
+    // Check if we should start a call based on navigation state
+    if (location.state?.startCall && user && room?.members?.length === 2 && !callActive && !callIncoming) {
+      const targetUserId = location.state.targetUserId;
+      const otherParticipant = room.members.find(m => m._id === targetUserId && m._id !== user._id);
+
+      if (otherParticipant) {
+        console.log(`[ChatRoomPage] Auto-starting call to ${targetUserId} based on navigation state.`);
+        startCall(otherParticipant._id);
+
+        // Clear the state after initiating the call to prevent re-triggering
+        // Use replace to avoid adding a new entry to the history stack
+        navigate(location.pathname, { replace: true, state: {} });
+      } else {
+         console.warn("[ChatRoomPage] Auto-start call requested, but target user not found or is self.");
+         // Clear state anyway if target is invalid
+         navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, user, room, callActive, callIncoming, navigate]); // Dependencies: state, user, room, call status
+
+
+  useEffect(() => {
+    // Assign streams to mobile video elements when they become available or view switches
+    const mainVideoEl = isLocalVideoMain ? mobileLocalVideoRef.current : mobileRemoteVideoRef.current
+    const floatingVideoEl = isLocalVideoMain ? mobileRemoteVideoRef.current : mobileLocalVideoRef.current
+    const mainStream = isLocalVideoMain ? localStream : remoteStream
+    const floatingStream = isLocalVideoMain ? remoteStream : localStream
+
+    if (mainVideoEl && mainStream && mainVideoEl.srcObject !== mainStream) {
+      mainVideoEl.srcObject = mainStream
+    }
+    if (floatingVideoEl && floatingStream && floatingVideoEl.srcObject !== floatingStream) {
+      floatingVideoEl.srcObject = floatingStream
+    }
+     // Clear srcObject if stream becomes null
+     if (mainVideoEl && !mainStream && mainVideoEl.srcObject) {
+        mainVideoEl.srcObject = null;
+     }
+     if (floatingVideoEl && !floatingStream && floatingVideoEl.srcObject) {
+        floatingVideoEl.srcObject = null;
+     }
+
+  }, [localStream, remoteStream, isLocalVideoMain, callActive]) // Rerun when streams or view change
+
 
   useEffect(() => {
     fetchRoomDetails()
@@ -594,6 +662,10 @@ const ChatRoomPage = () => {
     }
   }
 
+  // Find the other participant for P2P call
+  const otherParticipant = room?.members?.find(m => m._id !== user?._id)
+  const canStartCall = room?.members?.length === 2 && otherParticipant // Enable start only for 1-on-1
+
   if (initialLoading) {
     return <div className="loading-container">Loading room...</div>
   }
@@ -622,6 +694,7 @@ const ChatRoomPage = () => {
       />
       <Navbar />
       <main className="chat-room-main-content">
+        {/* --- Desktop Layout --- */}
         <div className="desktop-layout">
           <div className="chat-room-content">
             <div className="chat-left-panel">
@@ -771,6 +844,7 @@ const ChatRoomPage = () => {
           </div>
         </div>
 
+        {/* --- Mobile Layout --- */}
         <div className="mobile-layout">
           {/* Video panel */}
           <div className={`mobile-panel youtube-panel ${activeMobilePanel === "youtube" ? "active" : ""}`}>
@@ -825,42 +899,126 @@ const ChatRoomPage = () => {
 
           {/* Call panel */}
           <div className={`mobile-panel call-panel ${activeMobilePanel === "call" ? "active" : ""}`}>
-            <div className="participants-list">
-              <h5>Participants ({room?.members?.length || 0})</h5>
-              {room?.members?.map((member) => {
-                const isOnline = member.status === "online"
-                return (
-                  <div
-                    key={member._id}
-                    className="participant-item"
-                    title={isOnline ? "Online" : formatLastSeen(member.lastSeen)}
+            {!callActive ? (
+              <>
+                {/* Show participant list and start button only when not in a call */}
+                <div className="participants-list">
+                  <h5>Participants ({room?.members?.length || 0})</h5>
+                  {room?.members?.map((member) => {
+                    const isOnline = member.status === "online"
+                    return (
+                      <div
+                        key={member._id}
+                        className="participant-item"
+                        title={isOnline ? "Online" : formatLastSeen(member.lastSeen)}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={member.profilePicture || undefined} alt={member.username} />
+                            <AvatarFallback>{member.username?.substring(0, 2).toUpperCase() || "??"}</AvatarFallback>
+                          </Avatar>
+                          <span
+                            className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full border border-background ${
+                              isOnline ? "bg-green-500" : "bg-gray-400"
+                            }`}
+                          />
+                        </div>
+                        <span className="participant-username">
+                          {member.username} {member._id === user?._id ? "(You)" : ""}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                {/* Functional Start Call Button */}
+                {otherParticipant ? (
+                  <button
+                    className="btn btn-primary video-call-button-panel"
+                    onClick={() => startCall(otherParticipant._id)}
+                    disabled={!canStartCall || initialLoading || !!error}
+                    title={!canStartCall ? "Video call available for 2 participants only" : "Start video call"}
                   >
-                    <div className="relative">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.profilePicture || undefined} alt={member.username} />
-                        <AvatarFallback>{member.username?.substring(0, 2).toUpperCase() || "??"}</AvatarFallback>
-                      </Avatar>
-                      <span
-                        className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full border border-background ${
-                          isOnline ? "bg-green-500" : "bg-gray-400"
-                        }`}
-                      />
-                    </div>
-                    <span className="participant-username">
-                      {member.username} {member._id === user?._id ? "(You)" : ""}
-                    </span>
+                    Start Video Call
+                  </button>
+                ) : (
+                   <p className="text-center text-sm text-muted-foreground mt-4">Waiting for another participant to join...</p>
+                )}
+                 {!canStartCall && room?.members?.length > 2 && (
+                   <p className="text-center text-sm text-muted-foreground mt-2">Video call currently supports only 2 participants.</p>
+                 )}
+              </>
+            ) : (
+              <>
+                {/* Active Call UI */}
+                <div className="mobile-call-active-view">
+                  {/* Main Video */}
+                  <div className="mobile-call-main-video" onClick={handleSwitchVideoViews}>
+                    <video
+                      ref={isLocalVideoMain ? mobileLocalVideoRef : mobileRemoteVideoRef}
+                      key={isLocalVideoMain ? 'local-main' : 'remote-main'}
+                      autoPlay
+                      playsInline
+                      muted={isLocalVideoMain} // Mute only if it's the local video in main view
+                      className="main-video-element"
+                    />
                   </div>
-                )
-              })}
-            </div>
-            <button
-              className="btn btn-primary video-call-button-panel"
-              onClick={handleVideoCall}
-              disabled={initialLoading || !!error}
-            >
-              Start Video Call (Placeholder)
-            </button>
-            <p>Video calling feature coming soon!</p>
+
+                  {/* Floating Video */}
+                  <div className="mobile-call-floating-video" onClick={handleSwitchVideoViews}>
+                     <video
+                       ref={isLocalVideoMain ? mobileRemoteVideoRef : mobileLocalVideoRef}
+                       key={isLocalVideoMain ? 'remote-floating' : 'local-floating'}
+                       autoPlay
+                       playsInline
+                       muted={!isLocalVideoMain} // Mute only if it's the local video in floating view
+                       className="floating-video-element"
+                     />
+                  </div>
+
+                  {/* Call Controls */}
+                  <div className="mobile-call-controls">
+                     <button
+                       className={`mobile-call-btn ${!micEnabled ? "muted" : ""}`}
+                       onClick={handleToggleMic}
+                       title={micEnabled ? "Mute Mic" : "Unmute Mic"}
+                     >
+                       {micEnabled ? <Mic size={24} /> : <MicOff size={24} />}
+                     </button>
+                     <button
+                       className={`mobile-call-btn ${!videoEnabled ? "muted" : ""}`}
+                       onClick={handleToggleVideo}
+                       title={videoEnabled ? "Stop Video" : "Start Video"}
+                     >
+                       {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
+                     </button>
+                     <button
+                       className="mobile-call-btn switch"
+                       onClick={handleSwitchVideoViews}
+                       title="Switch Views"
+                     >
+                       <SwitchCamera size={24} />
+                     </button>
+                     <button
+                       className="mobile-call-btn hangup"
+                       onClick={handleHangCall}
+                       title="End Call"
+                     >
+                       <PhoneOff size={24} />
+                     </button>
+                  </div>
+                </div>
+              </>
+            )}
+             {/* Incoming Call Overlay */}
+             {callIncoming && !callActive && (
+                <div className="mobile-incoming-call-overlay">
+                   <p>Incoming call from {room?.members?.find(m => m._id === remoteUser)?.username || 'Unknown'}...</p>
+                   <div className="incoming-call-actions">
+                      <button className="btn btn-success" onClick={acceptCall}>Accept</button>
+                      <button className="btn btn-danger" onClick={declineCall}>Decline</button>
+                   </div>
+                </div>
+             )}
           </div>
         </div>
       </main>
