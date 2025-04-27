@@ -1,6 +1,6 @@
 // CORS configuration
 const corsConfig = {
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  origin: ['https://chord.onrender.com', 'http://localhost:5000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
