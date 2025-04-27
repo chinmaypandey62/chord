@@ -35,6 +35,7 @@ const VideoPlayer = ({ roomId, videoId }) => {
     if (!socket) return
 
     const player = playerRef.current
+    // Fix: If player is null, exit early
     if (!player || typeof player.getPlayerState !== "function") {
       console.warn("[VideoPlayer] Player not ready or invalid for sync.")
       return

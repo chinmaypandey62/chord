@@ -18,10 +18,29 @@ instance.interceptors.request.use(
 );
 
 // Log response errors
-instance.interceptors.response.use(
+axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("Axios response error:", error.response?.status, error.response?.data);
+    if (error.response) {
+      console.error(
+        "Axios response error:",
+        error.response.status,
+        error.response.data
+      );
+    } else if (error.request) {
+      // Show more details for debugging
+      console.error(
+        "Axios response error: No response received",
+        {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data,
+          request: error.request
+        }
+      );
+    } else {
+      console.error("Axios response error: Request setup error", error.message);
+    }
     return Promise.reject(error);
   }
 );

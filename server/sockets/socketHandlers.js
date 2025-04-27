@@ -154,6 +154,80 @@ export const setupSocketHandlers = (io) => {
       }
     });
 
+    // --- P2P Video Call Signaling ---
+    socket.on("call-offer", ({ to, offer, roomId }) => {
+      console.log(`[Socket Server] Received 'call-offer' from ${socket.userId} (${socket.id}) for ${to} in room ${roomId}`); // Log reception
+      const targetSocketId = userSockets.get(to)
+      // Always emit to the user, regardless of room join
+      // Pass the roomId for correct toast navigation and call logic
+      if (targetSocketId) {
+        console.log(`[Socket Server] Relaying 'call-offer' from ${socket.userId} (${socket.id}) to ${to} (${targetSocketId})`); // Log relay attempt
+        io.to(targetSocketId).emit("call-offer", { from: socket.userId, offer, roomId })
+      } else {
+        console.warn(`[Socket Server] Could not find target socket for 'call-offer': ${to}. Storing pending offer.`); // Log if target not found
+        if (!global.pendingCallOffers) global.pendingCallOffers = {}
+        global.pendingCallOffers[to] = { from: socket.userId, offer, roomId }
+      }
+    })
+
+    // Add handler for call-answer
+    socket.on("call-answer", ({ to, answer }) => {
+      console.log(`[Socket Server] Received 'call-answer' from ${socket.userId} (${socket.id}) intended for ${to}`); // Log reception
+      const targetSocketId = userSockets.get(to); // Use the map to find the target socket ID
+      if (targetSocketId) {
+        console.log(`[Socket Server] Relaying 'call-answer' from ${socket.userId} (${socket.id}) to ${to} (${targetSocketId})`); // Log relay attempt
+        io.to(targetSocketId).emit("call-answer", { from: socket.userId, answer }); // Emit directly to the target socket ID
+      } else {
+        console.warn(`[Socket Server] Could not find target socket for 'call-answer': ${to}`); // Log if target not found
+      }
+    });
+
+    // Add handler for call-ice-candidate
+    socket.on("call-ice-candidate", ({ to, candidate }) => {
+      // console.log(`[Socket Server] Received 'call-ice-candidate' from ${socket.userId} (${socket.id}) for ${to}`); // Log reception (can be noisy)
+      const targetSocketId = userSockets.get(to); // Use the map
+      if (targetSocketId) {
+        // console.log(`[Socket Server] Relaying 'call-ice-candidate' from ${socket.userId} (${socket.id}) to ${to} (${targetSocketId})`); // Log relay attempt (can be noisy)
+        io.to(targetSocketId).emit("call-ice-candidate", { from: socket.userId, candidate }); // Emit directly
+      } else {
+        // console.warn(`[Socket Server] Could not find target socket for 'call-ice-candidate': ${to}`); // Log if target not found (can be noisy)
+      }
+    });
+
+
+    // When a user connects, check for any pending call offers
+    if (userId && global.pendingCallOffers && global.pendingCallOffers[userId]) {
+      const pending = global.pendingCallOffers[userId]
+      console.log(`[Socket Server] Found pending call offer for ${userId} from ${pending.from}. Emitting.`); // Log pending offer emission
+      socket.emit("call-offer", pending)
+      delete global.pendingCallOffers[userId]
+    }
+
+    socket.on("call-decline", ({ to }) => {
+      console.log(`[Socket Server] Received 'call-decline' from ${socket.userId} (${socket.id}) for ${to}`); // Log reception
+      const targetSocketId = userSockets.get(to)
+      if (targetSocketId) {
+        console.log(`[Socket Server] Relaying 'call-decline' from ${socket.userId} (${socket.id}) to ${to} (${targetSocketId})`); // Log relay attempt
+        io.to(targetSocketId).emit("call-decline", { from: socket.userId }); // Include 'from'
+        // Also emit call-hangup to ensure both sides close their popups/UI
+        console.log(`[Socket Server] Also relaying 'call-hangup' for decline from ${socket.userId} (${socket.id}) to ${to} (${targetSocketId})`);
+        io.to(targetSocketId).emit("call-hangup", { from: socket.userId }); // Include 'from'
+      } else {
+        console.warn(`[Socket Server] Could not find target socket for 'call-decline': ${to}`); // Log if target not found
+      }
+    })
+
+    socket.on("call-hangup", ({ to }) => {
+      console.log(`[Socket Server] Received 'call-hangup' from ${socket.userId} (${socket.id}) for ${to}`); // Log reception
+      const targetSocketId = userSockets.get(to)
+      if (targetSocketId) {
+        console.log(`[Socket Server] Relaying 'call-hangup' from ${socket.userId} (${socket.id}) to ${to} (${targetSocketId})`); // Log relay attempt
+        io.to(targetSocketId).emit("call-hangup", { from: socket.userId }); // Include 'from'
+      } else {
+        console.warn(`[Socket Server] Could not find target socket for 'call-hangup': ${to}`); // Log if target not found
+      }
+    })
+
     // --- Disconnect ---
     socket.on("disconnect", async (reason) => { // Make the handler async
       console.log(`❌ User disconnected: ${socket.id}, Reason: ${reason}`);

@@ -1,22 +1,21 @@
-import { useEffect } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import { useAuth } from "../../context/AuthContext"
-import Navbar from "../../components/Navbar/Navbar"
-import "./LandingPage.css"
+import React, { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import Navbar from "../../components/Navbar/Navbar";
+import HeroAnimation from "../../components/HeroAnimation/HeroAnimation"; // Import HeroAnimation
+import "./LandingPage.css";
 
 const LandingPage = () => {
-  const { user, loading: authLoading } = useAuth()
-  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
-  // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (!authLoading && user) {
-      console.log("User already authenticated, redirecting to dashboard")
-      navigate("/dashboard")
+      console.log("User already authenticated, redirecting to dashboard");
+      navigate("/dashboard");
     }
-  }, [user, authLoading, navigate])
+  }, [user, authLoading, navigate]);
 
-  // Don't render the full page if the user is authenticated and redirection is pending
   if (authLoading || user) {
     return (
       <div className="landing-page loading-state">
@@ -24,7 +23,7 @@ const LandingPage = () => {
         <div className="loading-spinner"></div>
         <p>Loading...</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -50,7 +49,7 @@ const LandingPage = () => {
               </div>
             </div>
             <div className="hero-image">
-              <img src="/placeholder.svg?height=400&width=600" alt="Chord App Preview" />
+              <HeroAnimation />
             </div>
           </div>
         </section>
@@ -137,13 +136,13 @@ const LandingPage = () => {
                 <h3>Company</h3>
                 <ul>
                   <li>
-                    <a href="#">About Us</a>
+                    <a href="/">About Us</a>
                   </li>
                   <li>
-                    <a href="#">Careers</a>
+                    <a href="/">Careers</a>
                   </li>
                   <li>
-                    <a href="#">Contact</a>
+                    <a href="/">Contact</a>
                   </li>
                 </ul>
               </div>
@@ -152,13 +151,13 @@ const LandingPage = () => {
                 <h3>Legal</h3>
                 <ul>
                   <li>
-                    <a href="#">Privacy Policy</a>
+                    <a href="/">Privacy Policy</a>
                   </li>
                   <li>
-                    <a href="#">Terms of Service</a>
+                    <a href="/">Terms of Service</a>
                   </li>
                   <li>
-                    <a href="#">Cookie Policy</a>
+                    <a href="/">Cookie Policy</a>
                   </li>
                 </ul>
               </div>
@@ -171,7 +170,7 @@ const LandingPage = () => {
         </div>
       </footer>
     </div>
-  )
-}
+  );
+};
 
-export default LandingPage
+export default LandingPage;

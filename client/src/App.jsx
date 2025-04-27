@@ -6,6 +6,9 @@ import { AuthProvider, useAuth } from "./context/AuthContext"
 // import { SocketProvider } from "./context/SocketContext"; // <-- Removed import
 import { ThemeProvider } from "./components/theme-provider" // Ensure this path is correct
 import { FriendProvider } from "./context/FriendContext"
+import { Toaster } from "sonner"
+import { getSocket } from "./utils/socket"
+import { toast } from "sonner"
 
 // Pages - Corrected Paths
 import LandingPage from "./pages/LandingPage/LandingPage"
@@ -24,16 +27,109 @@ import "./styles/globals.css" // Ensure global styles are imported
 
 function App() {
   const [isClient, setIsClient] = useState(false)
+  const [socketReady, setSocketReady] = useState(false)
 
   useEffect(() => {
-    // Ensure this runs only on the client
     if (typeof window !== "undefined") {
-      setIsClient(true) // Set client status
+      setIsClient(true)
     }
   }, [])
 
-  // Render null or a loader until client status is confirmed
-  if (!isClient) return null // or a loading spinner
+  // Wait for socket to be initialized before attaching listeners
+  useEffect(() => {
+    if (!isClient) return
+    const interval = setInterval(() => {
+      const socket = getSocket()
+      if (socket && socket.connected) {
+        setSocketReady(true)
+        clearInterval(interval)
+      }
+    }, 200)
+    return () => clearInterval(interval)
+  }, [isClient])
+
+  useEffect(() => {
+    if (!socketReady) return
+    const socket = getSocket()
+    if (!socket) return
+
+    socket.off("call-offer", window.__globalCallOfferHandler)
+    socket.off("call-decline", window.__globalCallDeclineHandler)
+    socket.off("call-hangup", window.__globalCallHangupHandler)
+
+    window.__globalCallOfferHandler = (payload) => {
+      // Always show the toast, regardless of current page/room
+      const callRoomId = payload.roomId || payload.from
+      // Store the toast id so we can dismiss it later
+      window.__activeCallToastId = toast(
+        (t) => (
+          <div>
+            <strong>Incoming Call</strong>
+            <div style={{ margin: "6px 0" }}>You have an incoming call in a room.</div>
+            <button
+              className="btn btn-primary"
+              style={{ marginRight: 8 }}
+              onClick={() => {
+                window.location.href = `/chat/${callRoomId}`
+                toast.dismiss(t)
+              }}
+            >
+              Go to Call
+            </button>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                socket.emit("call-decline", { to: payload.from })
+                toast.dismiss(t)
+              }}
+            >
+              Reject
+            </button>
+          </div>
+        ),
+        {
+          duration: 10000,
+          important: true
+        }
+      )
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Incoming Call", {
+          body: "You have an incoming call in a room!",
+          icon: "/favicon.ico"
+        })
+      }
+    }
+
+    window.__globalCallDeclineHandler = () => {
+      // Dismiss any active incoming call toast
+      if (window.__activeCallToastId) {
+        toast.dismiss(window.__activeCallToastId)
+        window.__activeCallToastId = null
+      }
+      toast.info("The other user declined your call.")
+    }
+
+    window.__globalCallHangupHandler = () => {
+      // Dismiss any active incoming call toast
+      if (window.__activeCallToastId) {
+        toast.dismiss(window.__activeCallToastId)
+        window.__activeCallToastId = null
+      }
+      toast.info("The call has ended.")
+    }
+
+    socket.on("call-offer", window.__globalCallOfferHandler)
+    socket.on("call-decline", window.__globalCallDeclineHandler)
+    socket.on("call-hangup", window.__globalCallHangupHandler)
+
+    return () => {
+      socket.off("call-offer", window.__globalCallOfferHandler)
+      socket.off("call-decline", window.__globalCallDeclineHandler)
+      socket.off("call-hangup", window.__globalCallHangupHandler)
+    }
+  }, [socketReady])
+
+  if (!isClient) return null
 
   // Create a ProtectedRoute component to wrap protected routes
   const ProtectedRoute = ({ children }) => {
@@ -60,12 +156,14 @@ function App() {
   }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem> {/* Ensure system is the default */}
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <AuthProvider>
-        {/* <SocketProvider> */} {/* <-- Removed wrapper */}
+        {/* <SocketProvider> */}
           <FriendProvider>
             <Router>
               <div className="app">
+                {/* Add Toaster at the root so toasts show on any page */}
+                <Toaster position="top-center" richColors />
                 <Routes>
                   {/* Public routes */}
                   <Route path="/" element={<LandingPage />} />
@@ -112,7 +210,7 @@ function App() {
               </div>
             </Router>
           </FriendProvider>
-        {/* </SocketProvider> */} {/* <-- Removed wrapper */}
+        {/* </SocketProvider> */}
       </AuthProvider>
     </ThemeProvider>
   )

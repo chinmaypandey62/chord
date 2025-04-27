@@ -41,52 +41,47 @@ const SignInPage = () => {
       return;
     }
 
-    if(formData.password.length < 6) {
-      setError("Password must be at least 6 characters long.");
-      setLoading(false);
-      return;
-    }
+    const validatePassword = () => {
+      if (formData.password.length < 6) {
+        setError("Password must be at least 6 characters long.");
+        setLoading(false);
+        return false;
+      }
 
-    if(formData.password === formData.email) {
-      setError("Password cannot be the same as email.");
-      setLoading(false);
-      return;
-    }
+      if (formData.password === formData.email) {
+        setError("Password cannot be the same as email.");
+        setLoading(false);
+        return false;
+      }
 
-    if(formData.password === formData.username) {
-      setError("Password cannot be the same as username.");
-      setLoading(false);
-      return;
-    }
+      if (formData.password.includes(" ")) {
+        setError("Password cannot contain spaces.");
+        setLoading(false);
+        return false;
+      }
 
-    if(formData.password.includes(" ")) {
-      setError("Password cannot contain spaces.");
-      setLoading(false);  
-      return;
-    }
+      if (!/[A-Z]/.test(formData.password)) {
+        setError("Password must contain at least one uppercase letter.");
+        setLoading(false);
+        return false;
+      }
 
-    if (!/[A-Z]/.test(formData.password)) {
-      setError("Password must contain at least one uppercase letter.");
-      setLoading(false);
-      return;
-    }
+      if (!/[a-z]/.test(formData.password)) {
+        setError("Password must contain at least one lowercase letter.");
+        setLoading(false);
+        return false;
+      }
 
-    if (!/[a-z]/.test(formData.password)) {
-      setError("Password must contain at least one lowercase letter.");
-      setLoading(false);
-      return;
-    }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+        setError("Password must contain at least one special character.");
+        setLoading(false);
+        return false;
+      }
 
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
-      setError("Password must contain at least one special character.");
-      setLoading(false);
-      return;
-    }
+      return true;
+    };
 
-
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError("Please enter a valid email address.");
-      setLoading(false);
+    if (!validatePassword()) {
       return;
     }
 
@@ -111,7 +106,7 @@ const SignInPage = () => {
   if (authLoading || user) {
     return (
       <div className="signin-page loading-state">
-        <Navbar />
+        {/* <Navbar /> */}
         <div className="loading-spinner"></div>
         <p>Loading...</p>
       </div>

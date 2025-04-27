@@ -1,61 +1,53 @@
-# Node.js dependencies
+# General
+.DS_Store
+*.log
+*.pem
+
+# Node.js
 node_modules/
 
-# Logs
-logs
-*.log
+# Testing
+coverage/
+
+# Build
+build/
+
+# Environment Variables
+.env*
+
+# Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Dependency directories
-client/node_modules/
-server/node_modules/
-
-# Build outputs
-client/.next/
-client/out/
-client/build/
-
-# Environment files
-.env
-.env.*
-
-# Miscellaneous
-.DS_Store
-*.pem
+.pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
 
+# Next.js
+.next/
+out/
+
 # Vercel
-client/.vercel
+.vercel
 
-# Public files
-client/public/*.svg
+# Miscellaneous
+.qodo
 
-# Coverage
-coverage/
+# Client-specific
+client/.pnp
+client.pnp.*
+client.yarn/*
+!client.yarn/patches
+!client.yarn/plugins
+!client.yarn/releases
+!client.yarn/versions
+client/next-env.d.ts
 
-# Temporary files
-*.tmp
-*.temp
-
-# IDE specific files
-.vscode/
-.idea/
-*.swp
-
-# Ignore specific files in server
-server/*.log
-server/*.tmp
-
-# Ignore compiled JavaScript files
-server/**/*.js.map
-
-# Ignore test files
-server/directTest.js
-server/test/
-server/routes/testRoutes.js
-server/controllers/testController.js
-
+# Server-specific
+server/config/*.js
+server/models/*.js
+server/controllers/*.js
+server/middleware/*.js
+server/routes/*.js
+server/sockets/*.js

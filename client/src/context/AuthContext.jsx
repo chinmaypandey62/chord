@@ -81,6 +81,7 @@ export const AuthProvider = ({ children }) => {
 
       setUser(loggedInUser)
       if (loggedInUser?._id) {
+        console.log("[DEBUG] initializeSocket called with userId:", loggedInUser._id)
         initializeSocket(loggedInUser._id)
       } else {
         console.error("Logged in user data does not contain _id")

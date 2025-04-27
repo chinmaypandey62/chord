@@ -50,6 +50,8 @@
   border-radius: var(--radius);
   padding: 1.25rem;
   position: relative;
+  /* Add top padding to push the video area down */
+  padding-top: 0;
   background-color: hsl(var(--card));
   box-shadow: var(--box-shadow);
   height: 100%; /* Ensure the panel takes full height */
@@ -106,43 +108,48 @@
   transition: all 0.2s ease;
 }
 
-/* Participant video placeholder */
-.participant-video-placeholder {
-  position: relative;
+.video-call-participants-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.participant-video-box {
   width: 120px;
+  min-width: 100px;
+  height: 120px;
+  background: #18181b;
+  border-radius: 10px;
+  border: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+  position: relative;
+  margin-right: 8px;
+}
+
+.participant-video-placeholder {
+  width: 100%;
   height: 90px;
-  background-color: hsla(var(--muted), 0.3);
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 0.5rem;
-  overflow: hidden;
+  background: #23232a;
 }
 
-/* Online indicator styling */
-.online-indicator {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  background-color: hsl(var(--success));
-  border: 1px solid white;
-  border-radius: 50%;
-}
-
-/* Username styling */
 .participant-video-username {
-  font-size: 0.85rem;
-  color: hsl(var(--foreground));
-  font-weight: 500;
-  white-space: nowrap;
+  font-size: 0.9rem;
+  color: #fff;
+  text-align: center;
+  margin: 4px 0 8px 0;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
-  margin-top: 0.3rem;
+  white-space: nowrap;
 }
 
 /* Call controls styling */
@@ -210,6 +217,8 @@
   background-color: #000;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Add a now playing info bar at the bottom of video area */
@@ -620,5 +629,285 @@
   
   .mobile-video-form {
     display: none;
+  }
+
+  /* --- Fix for YouTube video area and info bar --- */
+  .youtube-video-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 340px;
+    height: 100%;
+    background: #000;
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .youtube-video-area .video-wrapper {
+    flex: 1 1 auto;
+    min-height: 240px;
+    max-height: 420px;
+    background: #000;
+    border-radius: var(--radius) var(--radius) 0 0;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .youtube-video-area .video-info-bar {
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.75rem 1rem;
+    background-color: hsla(var(--muted), 0.6);
+    border-top: var(--border-width) solid hsl(var(--border));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 60px;
+    max-height: 80px;
+    gap: 1rem;
+    margin-top: 0;
+  }
+
+  .youtube-video-area .video-info-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .youtube-video-area .video-title-container {
+    min-width: 0;
+    max-width: 320px;
+    overflow: hidden;
+  }
+
+  .youtube-video-area .video-title {
+    font-weight: 500;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.15rem;
+  }
+
+  .youtube-video-area .video-channel {
+    font-size: 0.85rem;
+    color: hsl(var(--muted-foreground));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .youtube-video-area .video-info-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .youtube-video-area .video-viewers {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .youtube-video-area .viewer-count {
+    color: hsl(var(--foreground));
+    font-weight: 500;
+  }
+
+  .youtube-video-area .video-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .youtube-video-area .video-action-button {
+    background-color: transparent;
+    border: none;
+    padding: 0.4rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: hsl(var(--foreground));
+    transition: all 0.2s ease;
+  }
+
+  .youtube-video-area .video-action-button:hover {
+    background-color: hsla(var(--muted), 0.8);
+  }
+
+  .pinned-video-area {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; /* Align to top */
+    min-height: 420px;
+    height: 420px;
+    background: #000;
+    border-radius: var(--radius);
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding-top: 0; /* Remove extra padding */
+    margin-top: 32px;
+  }
+
+  .pinned-video-area .pinned-video-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; /* Align to top */
+    width: 100%;
+    height: 100%;
+    min-height: 240px;
+    max-height: 420px;
+    padding: 0;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    background: transparent;
+  }
+
+  .pinned-video-area video {
+    width: 420px;
+    height: 320px;
+    max-width: 100%;
+    max-height: 320px;
+    border-radius: 18px;
+    background: #18181b;
+    object-fit: cover;
+    margin: 0 auto;
+    box-shadow: 0 4px 32px 0 rgba(0,0,0,0.25), 0 1.5px 8px 0 rgba(0,0,0,0.10);
+    border: 2px solid #23232a;
+    transition: box-shadow 0.2s, border 0.2s;
+    display: block;
+  }
+
+  .pinned-video-area .unpin-btn {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 10;
+    background: #23232a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 22px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    opacity: 0.88;
+    transition: opacity 0.2s, background 0.2s;
+    box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+  }
+  .pinned-video-area .unpin-btn:hover {
+    opacity: 1;
+    background: #333;
+  }
+
+  /* Video call control buttons (mic, cam, end, start call, unpin) */
+  .btn,
+  .btn-icon,
+  .unpin-btn,
+  .btn-primary,
+  .btn-success,
+  .btn-danger {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    border: none;
+    outline: none;
+    border-radius: 8px;
+    padding: 0.5rem 1.1rem;
+    margin: 0 0.15rem;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    box-shadow: 0 1.5px 8px 0 rgba(0,0,0,0.07);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4em;
+    user-select: none;
+  }
+
+  .btn-primary {
+    background: linear-gradient(90deg, #6366f1 0%, #7c3aed 100%);
+    color: #fff;
+  }
+  .btn-primary:hover, .btn-primary:focus {
+    background: linear-gradient(90deg, #4f46e5 0%, #6d28d9 100%);
+    color: #fff;
+  }
+
+  .btn-success {
+    background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+    color: #fff;
+  }
+  .btn-success:hover, .btn-success:focus {
+    background: linear-gradient(90deg, #16a34a 0%, #15803d 100%);
+    color: #fff;
+  }
+
+  .btn-danger, .btn-hangup {
+    background: linear-gradient(90deg, #ef4444 0%, #b91c1c 100%);
+    color: #fff;
+  }
+  .btn-danger:hover, .btn-danger:focus, .btn-hangup:hover, .btn-hangup:focus {
+    background: linear-gradient(90deg, #dc2626 0%, #991b1b 100%);
+    color: #fff;
+  }
+
+  .btn-mic, .btn-cam {
+    background: linear-gradient(90deg, #06b6d4 0%, #0ea5e9 100%);
+    color: #fff;
+  }
+  .btn-mic:hover, .btn-mic:focus,
+  .btn-cam:hover, .btn-cam:focus {
+    background: linear-gradient(90deg, #0ea5e9 0%, #0369a1 100%);
+    color: #fff;
+  }
+
+  .btn-muted {
+    background: #6b7280 !important;
+    color: #fff !important;
+    opacity: 0.7;
+  }
+
+  .unpin-btn {
+    background: #23232a;
+    color: #fff;
+    border-radius: 8px;
+    padding: 7px 22px;
+    font-size: 1rem;
+    font-weight: 500;
+    opacity: 0.88;
+    transition: opacity 0.2s, background 0.2s;
+    box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+  }
+  .unpin-btn:hover {
+    opacity: 1;
+    background: #333;
+  }
+
+  /* Remove default button border/focus for all call controls */
+  .btn:focus,
+  .btn-icon:focus,
+  .btn-primary:focus,
+  .btn-success:focus,
+  .btn-danger:focus,
+  .btn-mic:focus,
+  .btn-cam:focus,
+  .btn-hangup:focus,
+  .unpin-btn:focus {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
   }
 }
