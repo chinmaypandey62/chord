@@ -812,6 +812,12 @@
     display: none;
   }
 
+  /* Ensure chat-box fills remaining space in right panel */
+  .desktop-layout .chat-right-panel .chat-box {
+    flex: 1;
+    min-height: 0; /* Important for flex children in some browsers */
+  }
+
   /* --- Fix for YouTube video area and info bar --- */
   .youtube-video-area {
     display: flex;

@@ -1,7 +1,6 @@
 .chat-box {
   display: flex;
   flex-direction: column;
-  height: 100%;
   background-color: hsl(var(--card));
   color: hsl(var(--card-foreground));
   border: var(--border-width) solid hsl(var(--border));
@@ -159,7 +158,6 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-bottom: 17px;
 }
 
 .chat-input-form .btn-primary:hover:not(:disabled) {
