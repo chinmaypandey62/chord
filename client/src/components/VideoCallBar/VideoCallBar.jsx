@@ -1,3 +1,5 @@
+"use client" // Add client directive
+
 import React, { useEffect, useRef } from "react"
 
 const VideoCallBar = ({
@@ -13,6 +15,11 @@ const VideoCallBar = ({
   room,
   user
 }) => {
+  // Add safety check for SSR
+  if (typeof window === 'undefined' || !room) {
+    return null;
+  }
+
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
 
@@ -29,9 +36,10 @@ const VideoCallBar = ({
   }, [remoteStream])
 
   // Find another user to call (for demo: first other member)
-  const otherMember = room?.members?.find(m => m._id !== user?._id)
-
-  if (!room) return null
+  // Add additional safety checks
+  const otherMember = room?.members?.length > 0 
+    ? room.members.find(m => m._id !== user?._id) 
+    : null;
 
   return (
     <div style={{

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import Link from "next/link" // Changed from react-router-dom
+import { useRouter } from "next/navigation" // Changed from react-router-dom
 import { useAuth } from "../../context/AuthContext"
 import Navbar from "../../components/Navbar/Navbar"
 import "./SignUpPage.css"
@@ -16,17 +17,28 @@ const SignUpPage = () => {
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isClient, setIsClient] = useState(false); // Add isClient state
 
-  const { register, user, loading: authLoading } = useAuth()
-  const navigate = useNavigate()
+  const auth = useAuth(); // Get the whole context object
+  const router = useRouter() // Changed from useNavigate
+  
+  // Destructure context safely
+  const register = auth?.register;
+  const user = auth?.user;
+  const authLoading = auth?.loading ?? true; // Default to true if context is undefined
 
-  // Redirect to dashboard if already authenticated
+  // Set isClient to true only on the client
   useEffect(() => {
-    if (!authLoading && user) {
+    setIsClient(true);
+  }, []);
+
+  // Redirect to dashboard if already authenticated (runs only on client)
+  useEffect(() => {
+    if (isClient && !authLoading && user) {
       console.log("User already authenticated, redirecting to dashboard")
-      navigate("/dashboard")
+      router.push("/dashboard") // Changed from navigate
     }
-  }, [user, authLoading, navigate])
+  }, [user, authLoading, router, isClient]); // Updated dependency
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -94,6 +106,12 @@ const SignUpPage = () => {
 
     if (!validateForm()) return
 
+    // Ensure register function is available
+    if (!register) {
+      setErrors({ general: "Registration service is unavailable." });
+      return;
+    }
+
     setIsSubmitting(true)
     console.log(formData)
     try {
@@ -106,7 +124,7 @@ const SignUpPage = () => {
 
       if (result.success) {
         // Navigate directly to dashboard after successful registration
-        navigate("/dashboard")
+        router.push("/dashboard") // Changed from navigate
       } else {
         setErrors({ general: result.error || "Registration failed" })
       }
@@ -117,16 +135,20 @@ const SignUpPage = () => {
     }
   }
 
-  // Don't render the form if the user is authenticated and redirection is pending
-  if (authLoading || user) {
+  // Render loading state until client-side and auth is checked
+  if (!isClient || authLoading) {
     return (
       <div className="signup-page loading-state">
         <Navbar />
-        <div className="loading-spinner"></div>
-        <p>Loading...</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}>
+           <p>Loading...</p>
+        </div>
       </div>
     )
   }
+
+  // If user is logged in (and redirection is happening), render null briefly
+  if (user) return null;
 
   return (
     <div className="signup-page">
@@ -231,7 +253,7 @@ const SignUpPage = () => {
 
           <div className="signup-footer">
             <p>
-              Already have an account? <Link to="/signin">Sign In</Link>
+              Already have an account? <Link href="/signin">Sign In</Link> {/* Changed to href */}
             </p>
           </div>
         </div>

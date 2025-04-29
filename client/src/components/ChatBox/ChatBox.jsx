@@ -6,11 +6,16 @@ import { useAuth } from "../../context/AuthContext"
 import "./ChatBox.css"
 
 const ChatBox = ({ roomId }) => {
+  // Add protection against null/undefined roomId during SSR
+  if (typeof window === 'undefined' && !roomId) {
+    return <div className="chat-box">Loading chat...</div>
+  }
+
   const [messages, setMessages] = useState([])
   const [messageInput, setMessageInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [typingUsers, setTypingUsers] = useState([])
-  const { user } = useAuth()
+  const { user } = useAuth() || { user: null }
   const messagesEndRef = useRef(null)
   const typingTimeoutRef = useRef(null)
 

@@ -6,31 +6,42 @@ import Navbar from "../../components/Navbar/Navbar" // Corrected path
 import "./ProfilePage.css"
 
 const ProfilePage = () => {
-  const { user, updateProfile } = useAuth()
+  const auth = useAuth(); // Get the whole context object
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     bio: "",
-  })
+  });
   const [avatar, setAvatar] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState("")
+  const [isClient, setIsClient] = useState(false); // Add isClient state
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [status, setStatus] = useState(null)
 
+  // Destructure context safely
+  const user = auth?.user;
+  const updateProfile = auth?.updateProfile;
+  const authLoading = auth?.loading ?? true;
+
+  // Set isClient to true only on the client
   useEffect(() => {
-    if (user) {
+    setIsClient(true);
+  }, []);
+
+  // Populate form data once user is loaded (runs only on client)
+  useEffect(() => {
+    if (isClient && user) {
       setFormData({
         username: user.username || "",
         email: user.email || "",
         bio: user.bio || "",
-      })
-
+      });
       if (user.avatar) {
-        setAvatarPreview(user.avatar)
+        setAvatarPreview(user.avatar);
       }
     }
-  }, [user])
+  }, [user, isClient]); // Add isClient dependency
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -55,7 +66,16 @@ const ProfilePage = () => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
+
+    // Ensure updateProfile function is available
+    if (!updateProfile) {
+      setStatus({
+        type: "error",
+        message: "Profile update service is unavailable.",
+      });
+      return;
+    }
 
     setIsSubmitting(true)
 
@@ -96,6 +116,31 @@ const ProfilePage = () => {
         setStatus(null)
       }, 3000)
     }
+  }
+
+  // Render loading state until client-side and auth is checked
+  if (!isClient || authLoading) {
+    return (
+      <div className="profile-page loading-state">
+        <Navbar />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}>
+           <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not loading but no user (shouldn't happen if routing is correct, but as fallback)
+  if (!user) {
+     return (
+      <div className="profile-page error-state">
+        <Navbar />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}>
+           <p>User not found. Please sign in.</p>
+           {/* Optionally add a link/button to sign in */}
+        </div>
+      </div>
+    );
   }
 
   return (

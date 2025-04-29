@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link"; // Changed from react-router-dom
 import { useAuth } from "../../context/AuthContext";
 import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
-import { Menu, X } from "lucide-react"; // Assuming you have lucide-react installed
+import { Menu, X, User } from "lucide-react"; // Added User icon
 import "./Navbar.css";
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const auth = useAuth();
+  const user = auth?.user;
+  const logout = auth?.logout;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -16,7 +18,7 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="container navbar-container">
-        <Link to="/" className="navbar-brand">
+        <Link href="/" className="navbar-brand">
           <span className="text-primary">C</span>hord
         </Link>
 
@@ -33,8 +35,13 @@ const Navbar = () => {
         <div className={`navbar-links ${isMenuOpen ? 'navbar-links-active' : ''}`}>
           {user ? (
             <>
-              <Link to="/dashboard" className="nav-link">
+              <Link href="/dashboard" className="nav-link">
                 Dashboard
+              </Link>
+              {/* Added Profile Link */}
+              <Link href="/profile" className="nav-link">
+                <User size={18} className="mr-1" />
+                Profile
               </Link>
               <div className="nav-divider"></div>
               <button onClick={logout} className="nav-link nav-button">
@@ -44,10 +51,10 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <Link to="/signin" className="nav-link">
+              <Link href="/signin" className="nav-link">
                 Sign In
               </Link>
-              <Link to="/signup" className="nav-link nav-button-primary">
+              <Link href="/signup" className="nav-link nav-button-primary">
                 Sign Up
               </Link>
             </>

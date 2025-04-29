@@ -1,11 +1,16 @@
 "use client"
 
-import React, { useEffect, useRef, useCallback } from "react"
+import React, { useEffect, useRef, useCallback, useState } from "react"
 import YouTube from "react-youtube"
 import { getSocket } from "../../utils/socket"
 import "./VideoPlayer.css"
 
 const VideoPlayer = ({ roomId, videoId }) => {
+  // Add SSR protection
+  if (typeof window === 'undefined' || !roomId || !videoId) {
+    return <div className="video-wrapper loading">Loading video player...</div>;
+  }
+
   const playerRef = useRef(null)
   const isSyncingRef = useRef(false)
   const lastSentTimeRef = useRef(0)

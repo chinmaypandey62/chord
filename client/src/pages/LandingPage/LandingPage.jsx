@@ -1,30 +1,49 @@
-import React, { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+"use client"
+
+import React, { useEffect, useState } from "react"; // Import useState
+import Link from "next/link"; // Changed from react-router-dom
+import { useRouter } from "next/navigation"; // Changed from react-router-dom
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar/Navbar";
 import HeroAnimation from "../../components/HeroAnimation/HeroAnimation"; // Import HeroAnimation
 import "./LandingPage.css";
 
 const LandingPage = () => {
-  const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const auth = useAuth(); // Get the whole context object
+  const router = useRouter(); // Changed from useNavigate
+  const [isClient, setIsClient] = useState(false); // Add isClient state
 
+  // Destructure context safely
+  const user = auth?.user;
+  const authLoading = auth?.loading ?? true; // Default to true if context is undefined
+
+  // Set isClient to true only on the client
   useEffect(() => {
-    if (!authLoading && user) {
-      console.log("User already authenticated, redirecting to dashboard");
-      navigate("/dashboard");
-    }
-  }, [user, authLoading, navigate]);
+    setIsClient(true);
+  }, []);
 
-  if (authLoading || user) {
+  // Redirect if authenticated (runs only on client)
+  useEffect(() => {
+    if (isClient && !authLoading && user) {
+      console.log("User already authenticated, redirecting to dashboard");
+      router.push("/dashboard"); // Changed from navigate
+    }
+  }, [user, authLoading, router, isClient]); // Updated dependency
+
+  // Render loading state until client-side and auth is checked
+  if (!isClient || authLoading) {
     return (
       <div className="landing-page loading-state">
         <Navbar />
-        <div className="loading-spinner"></div>
-        <p>Loading...</p>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}>
+           <p>Loading...</p>
+        </div>
       </div>
     );
   }
+
+  // If user is logged in (and redirection is happening), render null briefly
+  if (user) return null;
 
   return (
     <div className="landing-page">
@@ -40,10 +59,10 @@ const LandingPage = () => {
                 where they are.
               </p>
               <div className="hero-buttons">
-                <Link to="/signup" className="btn btn-primary btn-lg">
+                <Link href="/signup" className="btn btn-primary btn-lg">
                   Get Started
                 </Link>
-                <Link to="/signin" className="btn btn-secondary btn-lg">
+                <Link href="/signin" className="btn btn-secondary btn-lg">
                   Sign In
                 </Link>
               </div>
@@ -116,7 +135,7 @@ const LandingPage = () => {
           <div className="container">
             <h2>Ready to get started?</h2>
             <p>Join Chord today and start connecting with friends in a whole new way.</p>
-            <Link to="/signup" className="btn btn-primary btn-lg">
+            <Link href="/signup" className="btn btn-primary btn-lg">
               Sign Up Now
             </Link>
           </div>

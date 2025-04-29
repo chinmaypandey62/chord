@@ -1,69 +1,72 @@
 "use client"
 
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { useFriends } from "../../context/FriendContext"; // <-- Import useFriends
-import Navbar from "../../components/Navbar/Navbar";
-import FriendCard from "../../components/FriendCard/FriendCard";
-import "./DashboardPage.css";
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation'; // Replace react-router with Next.js router
+import { useAuth } from '../../context/AuthContext';
+import { useFriends } from '../../context/FriendContext';
+import Navbar from '../../components/Navbar/Navbar';
+import FriendCard from '../../components/FriendCard/FriendCard';
+import './DashboardPage.css';
 
 const DashboardPage = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const router = useRouter(); // Use Next.js router
   const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const { friends, loading: friendsLoading, error, fetchFriends } = useFriends();
+  const initialFetchDone = useRef(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Combine loading states
+  const loading = authLoading || friendsLoading;
 
-  // Use state from FriendContext
-  const { friends, loading, error, fetchFriends } = useFriends(); // <-- Use context state and fetch functions
-
-  // Check authentication status and trigger initial fetch from context
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        console.log("No user found, redirecting to login page");
-        navigate("/signin");
-        return;
-      }
-      console.log("Dashboard - User authenticated:", user);
-    }
-  }, [user, authLoading, navigate]);
-
+  // Handle search input changes
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
 
-  // Log state for debugging
-  console.log("Dashboard render - Context Loading:", loading);
-  console.log("Dashboard render - Context Friends:", friends);
-  console.log("Dashboard render - User:", user);
+  // This effect runs only once after user is authenticated
+  useEffect(() => {
+    // Don't do anything if still loading auth or no user
+    if (authLoading || !user) return;
+    
+    if (!initialFetchDone.current) {
+      console.log("Dashboard - Fetching friends...");
+      // Small delay to ensure auth context is fully processed
+      const timeoutId = setTimeout(() => {
+        initialFetchDone.current = true;
+        fetchFriends(true);
+      }, 300);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user, authLoading, fetchFriends]);
 
-  // Safe filtering with Array check (using friends from context)
-  const filteredFriends = Array.isArray(friends)
-    ? friends.filter((friend) =>
-        friend?.username?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
-
-  // Show loading state (use loading from context)
-  if (authLoading || loading) {
+  // Render loading state
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background dark:bg-background flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-xl">Loading dashboard...</p>
-          </div>
-        </div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading your dashboard...</p>
       </div>
     );
   }
 
-  // If not loading and no user (should have been redirected, but as a fallback)
-  if (!user) {
-    return null; // Or a message indicating redirection
+  // Render error state if there's an error
+  if (error) {
+    return (
+      <div className="error-state">
+        <p>{error}</p>
+        <button onClick={() => fetchFriends(true)}>Retry</button>
+      </div>
+    );
   }
 
+  // Filter friends based on search term
+  const filteredFriends = friends.filter(friend => 
+    friend.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    friend.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Rest of your component remains the same...
   return (
     <div className="dashboard-page">
       <Navbar />
@@ -90,7 +93,7 @@ const DashboardPage = () => {
               <h2>Friends</h2>
               <button
                 className="btn btn-secondary"
-                onClick={() => navigate("/friends")}
+                onClick={() => router.push("/friends")} // Use router.push instead of navigate
               >
                 View Friend Requests
               </button>
@@ -99,11 +102,14 @@ const DashboardPage = () => {
             {error ? (
               <div className="error-state">
                 <p>{error}</p>
-                <button className="btn btn-primary" onClick={fetchFriends}>
+                {/* Ensure fetchFriends exists before calling */}
+                <button className="btn btn-primary" onClick={() => fetchFriends && fetchFriends()}>
                   Try Again
                 </button>
               </div>
-            ) : filteredFriends.length === 0 ? (
+            ) : null}
+
+            {filteredFriends.length === 0 ? (
               <div className="empty-state">
                 {searchTerm ? (
                   <p>No friends match your search.</p>
@@ -112,7 +118,7 @@ const DashboardPage = () => {
                     <p>You don't have any friends yet.</p>
                     <button
                       className="btn btn-primary"
-                      onClick={() => navigate("/friends")}
+                      onClick={() => router.push("/friends")} // Use router.push instead of navigate
                     >
                       Find Friends
                     </button>

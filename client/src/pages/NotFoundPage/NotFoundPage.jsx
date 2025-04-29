@@ -1,4 +1,6 @@
-import { Link } from "react-router-dom"
+"use client"
+
+import Link from "next/link" // Changed from react-router-dom
 import Navbar from "../../components/Navbar/Navbar" // Corrected path
 import "./NotFoundPage.css"
 
@@ -12,7 +14,7 @@ const NotFoundPage = () => {
           <h1>404</h1>
           <h2>Page Not Found</h2>
           <p>The page you are looking for doesn't exist or has been moved.</p>
-          <Link to="/" className="btn btn-primary">
+          <Link href="/" className="btn btn-primary">
             Go Home
           </Link>
         </div>

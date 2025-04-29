@@ -1,63 +1,75 @@
 import { io } from "socket.io-client";
 
-const URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"; // Provide a fallback URL
+const URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 // Store the socket instance globally within this module
 let socket = null;
+let socketInitialized = false;
 
 // Export a function to initialize the socket connection
 export const initializeSocket = (userId) => {
-  // Prevent creating multiple connections
-  if (socket && socket.connected) {
-    // If already connected with the same user, return existing socket
-    if (socket.auth?.userId === userId) {
-      console.log("Socket already connected for user:", userId);
-      return socket;
-    }
-    // If connected with a different user, disconnect first
-    console.log("Disconnecting existing socket before reconnecting with user:", userId);
-    socket.disconnect();
-  }
-
+  // Don't proceed without userId
   if (!userId) {
     console.error("Cannot initialize socket without userId.");
-    return null; // Or handle appropriately
+    return null;
+  }
+
+  // If already connected with the same user, return existing socket
+  if (socket && socket.connected && socket.auth?.userId === userId) {
+    console.log("Socket already connected for user:", userId);
+    socketInitialized = true;
+    return socket;
+  }
+  
+  // If connected with a different user or disconnected, disconnect first
+  if (socket) {
+    console.log("Disconnecting existing socket before reconnecting with user:", userId);
+    socket.disconnect();
+    socket = null;
   }
 
   console.log("Initializing socket connection for user:", userId);
-  socket = io(URL, {
-    withCredentials: true,
-    transports: ['websocket'],
-    // Add the auth object here
-    auth: {
-      userId: userId // Pass the user ID obtained after login
-    }
-  });
+  
+  try {
+    socket = io(URL, {
+      withCredentials: true,
+      transports: ['websocket'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000,
+      auth: {
+        userId: userId
+      }
+    });
 
-  // Optional: Add basic connection logging
-  socket.on('connect', () => {
-    console.log(`Socket connected: ${socket.id} for user ${userId}`);
-  });
+    // Add connection logging
+    socket.on('connect', () => {
+      console.log(`Socket connected: ${socket.id} for user ${userId}`);
+      socketInitialized = true;
+    });
 
-  socket.on('disconnect', (reason) => {
-    console.log(`Socket disconnected: ${reason}`);
-    // Optionally nullify socket here if you want re-initialization on next attempt
-    // socket = null;
-  });
+    socket.on('disconnect', (reason) => {
+      console.log(`Socket disconnected: ${reason}`);
+      socketInitialized = false;
+    });
 
-  socket.on('connect_error', (err) => {
-    console.error(`Socket connection error: ${err.message}`);
-  });
+    socket.on('connect_error', (err) => {
+      console.error(`Socket connection error: ${err.message}`);
+      socketInitialized = false;
+    });
 
-  return socket;
+    return socket;
+  } catch (error) {
+    console.error("Socket initialization error:", error);
+    return null;
+  }
 };
 
 // Export a function to get the current socket instance
 export const getSocket = () => {
-  if (!socket) {
+  if (!socket || !socketInitialized) {
     console.warn("Socket requested before initialization or after disconnection.");
-    // Depending on your app's logic, you might want to throw an error
-    // or return null/undefined.
+    return null;
   }
   return socket;
 };
@@ -67,9 +79,7 @@ export const disconnectSocket = () => {
   if (socket) {
     console.log("Disconnecting socket manually.");
     socket.disconnect();
-    socket = null; // Clear the instance
+    socket = null;
+    socketInitialized = false;
   }
 };
-
-// Note: We no longer export the socket instance directly
-// export default socket; // Remove this line

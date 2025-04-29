@@ -1,6 +1,8 @@
+"use client" // Add client directive
+
 import React, { useEffect, useRef, useState } from 'react'
 import PropTypes from 'prop-types'
-import styles from './HeroAnimation.css'
+import './HeroAnimation.css' // Fix CSS import
 
 const HeroAnimation = ({
   animationPath = '/animations/chord-hero.json',
@@ -11,8 +13,9 @@ const HeroAnimation = ({
   const containerRef = useRef(null)
   const [shouldLoad, setShouldLoad] = useState(false)
 
+  // Skip IntersectionObserver logic during SSR
   useEffect(() => {
-    if (!containerRef.current) return
+    if (typeof window === 'undefined' || !containerRef.current) return
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -29,6 +32,8 @@ const HeroAnimation = ({
   }, [])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     let anim
     if (shouldLoad && containerRef.current) {
       import('lottie-web').then((lottie) => {
@@ -48,7 +53,7 @@ const HeroAnimation = ({
     <>
       <div
         ref={containerRef}
-        className={`${className} mx-auto w-4/5 max-w-[500px] sm:max-w-[300px] ${styles.glow}`}
+        className={`${className} mx-auto w-4/5 max-w-[500px] sm:max-w-[300px] glow`}
       />
       <noscript>
         <img

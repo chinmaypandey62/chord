@@ -1,5 +1,7 @@
+"use client" // Add client directive
+
 import React, { useRef, useEffect } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar" // Fix import path
 
 const VideoCallParticipantsBar = ({
   room,
@@ -17,8 +19,13 @@ const VideoCallParticipantsBar = ({
   onToggleVideo,
   micEnabled,
   videoEnabled,
-  onParticipantVideoDoubleClick // <-- new prop
+  onParticipantVideoDoubleClick
 }) => {
+  // Add safety check for SSR
+  if (typeof window === 'undefined' || !room || !user) {
+    return null;
+  }
+  
   // Refs for video elements
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
@@ -37,6 +44,8 @@ const VideoCallParticipantsBar = ({
 
   // Helper: get participant display
   const renderParticipantBox = (participant) => {
+    if (!participant || !participant._id) return null;
+    
     const isSelf = participant._id === user._id
     const isOnline = participant.status === "online"
     // Show video if call is active and this is self or remote

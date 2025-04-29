@@ -4,7 +4,16 @@ import { createContext, useState, useEffect, useContext } from "react"
 import axios from "../utils/axios"
 import { initializeSocket, disconnectSocket } from "../utils/socket"
 
-const AuthContext = createContext()
+const AuthContext = createContext({
+  user: null,
+  loading: true,
+  error: null,
+  login: () => {},
+  register: () => {},
+  logout: () => {},
+  updateProfile: () => {},
+  setError: () => {},
+})
 
 export const useAuth = () => useContext(AuthContext)
 
@@ -12,10 +21,20 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [isClient, setIsClient] = useState(false)
+
+  // Only run client-side code after component mounts
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   useEffect(() => {
+    // Skip if not in browser environment
+    if (!isClient) return;
+    
     const checkLoggedIn = async () => {
-      const token = localStorage.getItem("token")
+      // Safe localStorage access
+      const token = typeof window !== 'undefined' ? localStorage.getItem("token") : null;
       if (token) {
         try {
           console.log("Token found, attempting to verify...")
@@ -37,7 +56,7 @@ export const AuthProvider = ({ children }) => {
       }
     }
     checkLoggedIn()
-  }, [])
+  }, [isClient]) // Only run when isClient changes to true
 
   const fetchUserProfile = async (token) => {
     console.log("fetchUserProfile - Token received:", token)
@@ -67,6 +86,11 @@ export const AuthProvider = ({ children }) => {
   }
 
   const login = async (usernameOrEmail, password) => {
+    // Ensure we're on client side
+    if (typeof window === 'undefined') {
+      return { success: false, error: "Cannot login during server rendering" };
+    }
+    
     setLoading(true)
     setError(null)
     try {
@@ -106,6 +130,10 @@ export const AuthProvider = ({ children }) => {
   }
 
   const register = async (registrationData) => {
+    if (typeof window === 'undefined') {
+      return { success: false, error: "Cannot register during server rendering" };
+    }
+    
     setError(null)
     setLoading(true)
     try {
@@ -137,6 +165,8 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = () => {
+    if (typeof window === 'undefined') return;
+    
     console.log("Logging out user...")
     localStorage.removeItem("token")
     setUser(null)
@@ -146,6 +176,10 @@ export const AuthProvider = ({ children }) => {
   }
 
   const updateProfile = async (userData) => {
+    if (typeof window === 'undefined') {
+      return { success: false, error: "Cannot update profile during server rendering" };
+    }
+    
     setError(null)
     try {
       const token = localStorage.getItem("token")

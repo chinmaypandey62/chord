@@ -1,113 +1,174 @@
 "use client"
 
-import React, { createContext, useState, useEffect, useContext } from "react"
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from "react"
 import axios from "../utils/axios"
 import { useAuth } from "./AuthContext"
-import { getSocket } from "../utils/socket"; // <-- Import getSocket
+import { getSocket } from "../utils/socket"
 
-const FriendContext = createContext()
+// Provide default values to prevent destructuring errors during SSR
+const FriendContext = createContext({
+  friends: [],
+  friendRequests: [],
+  loading: false,
+  error: null,
+  fetchFriends: () => {},
+  fetchFriendRequests: () => {},
+  sendRequest: () => {},
+  respondRequest: () => {},
+  removeFriend: () => {},
+  setError: () => {}
+})
 
 export const useFriends = () => useContext(FriendContext)
 
 export const FriendProvider = ({ children }) => {
-  const { user } = useAuth() // Get the logged-in user
+  // Safely access auth context with fallback for SSR
+  const auth = useAuth() || { user: null, loading: true }
+  const { user, loading: authLoading } = auth
+  
   const [friends, setFriends] = useState([])
   const [friendRequests, setFriendRequests] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [lastFetchTime, setLastFetchTime] = useState(0)
+  const isFetchingRef = useRef(false)
+  const initialized = useRef(false)
+  const [isMounted, setIsMounted] = useState(false)
+  
+  // Check if we're running in the browser
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
-  // Function to fetch friends list
-  const fetchFriends = async () => {
-    if (!user) return; // Don't fetch if no user
-    setLoading(true)
-    setError(null)
+  // Function to fetch friends list with better error handling
+  const fetchFriends = useCallback(async (force = false) => {
+    // Don't fetch if auth is still loading
+    if (authLoading) return;
+    
+    // Don't fetch if no user is logged in
+    if (!user?._id) return;
+    
+    // Prevent multiple concurrent fetches
+    if (isFetchingRef.current) return;
+    
+    // Skip if recent fetch (within last 5 seconds) unless forced
+    if (!force && Date.now() - lastFetchTime < 5000) return;
+    
+    isFetchingRef.current = true;
+    setLoading(true);
+    setError(null);
+    
     try {
       console.log("[FriendContext] Fetching friends...");
-      const response = await axios.get("/friends") // API endpoint for friends
-      // The response.data should already include status and lastSeen from the controller update
-      setFriends(response.data || [])
+      const response = await axios.get("/friends");
+      setFriends(response.data || []);
       console.log("[FriendContext] Friends fetched:", response.data);
+      setLastFetchTime(Date.now());
     } catch (err) {
-      console.error("[FriendContext] Error fetching friends:", err)
-      setError(err.response?.data?.message || "Failed to fetch friends")
-      setFriends([]) // Clear friends on error
+      console.error("[FriendContext] Error fetching friends:", err);
+      setError(err.response?.data?.message || "Failed to fetch friends");
+      // Don't clear friends on error - maintain previous state
     } finally {
-      setLoading(false)
+      setLoading(false);
+      isFetchingRef.current = false;
     }
-  }
+  }, [user?._id, lastFetchTime, authLoading]);
 
-  // Function to fetch friend requests
-  const fetchFriendRequests = async () => {
-    if (!user) return; // Don't fetch if no user
-    setLoading(true)
-    setError(null)
+  // Function to fetch friend requests - improved
+  const fetchFriendRequests = useCallback(async (force = false) => {
+    if (authLoading || !user?._id || isFetchingRef.current || 
+       (!force && Date.now() - lastFetchTime < 5000)) return;
+    
+    isFetchingRef.current = true;
+    setLoading(true);
+    
     try {
       console.log("[FriendContext] Fetching friend requests...");
-      const response = await axios.get("/friends/requests") // API endpoint for requests
-      // The response.data should already include sender status/lastSeen from the controller update
-      setFriendRequests(response.data || [])
+      const response = await axios.get("/friends/requests");
+      setFriendRequests(response.data || []);
       console.log("[FriendContext] Friend requests fetched:", response.data);
     } catch (err) {
-      console.error("[FriendContext] Error fetching friend requests:", err)
-      setError(err.response?.data?.message || "Failed to fetch friend requests")
-      setFriendRequests([]) // Clear requests on error
+      console.error("[FriendContext] Error fetching friend requests:", err);
+      setError(err.response?.data?.message || "Failed to fetch friend requests");
+      // Don't clear requests on error
     } finally {
-      setLoading(false)
+      setLoading(false);
+      isFetchingRef.current = false;
     }
-  }
+  }, [user?._id, lastFetchTime, authLoading]);
 
-  // Fetch initial data when user logs in
+  // Fetch initial data when user logs in - only once
   useEffect(() => {
-    if (user?._id) {
+    // Skip if auth is still loading
+    if (authLoading) return;
+    
+    if (user?._id && !initialized.current) {
       console.log("[FriendContext] User logged in, fetching initial friend data...");
-      fetchFriends()
-      fetchFriendRequests()
-    } else {
+      initialized.current = true;
+      // Use setTimeout to ensure auth is fully processed
+      setTimeout(() => {
+        fetchFriends(true);
+        fetchFriendRequests(true);
+      }, 500);
+    } else if (!user) {
       // Clear data when user logs out
       console.log("[FriendContext] User logged out, clearing friend data...");
-      setFriends([])
-      setFriendRequests([])
+      setFriends([]);
+      setFriendRequests([]);
+      initialized.current = false;
     }
-  }, [user?._id]) // Re-run when user ID changes (login/logout)
+  }, [user?._id, authLoading, fetchFriends, fetchFriendRequests]);
 
-
-  // --- Add Socket Listener for Status Changes ---
+  // Socket listener setup with better error handling
   useEffect(() => {
-    const socket = getSocket(); // Get the socket instance
-
-    // Only set up listener if socket exists and user is logged in
-    if (socket && user?._id) {
+    // Skip if not mounted on client
+    if (!isMounted) return;
+    
+    // Skip if auth is still loading
+    if (authLoading) return;
+    
+    // Skip if no user
+    if (!user?._id) return;
+    
+    // Small delay to ensure socket is initialized
+    const timeoutId = setTimeout(() => {
+      const socket = getSocket();
+      
+      if (!socket) {
+        console.log("[FriendContext] Socket not available or user not logged in, skipping listener setup.");
+        return;
+      }
+      
       console.log("[FriendContext] Setting up socket listener for 'user-status-change'");
-
+      
       const handleStatusChange = ({ userId, status, lastSeen }) => {
         console.log(`[FriendContext] Received status change: User ${userId} is now ${status}`);
-        // Update the friends list state
-        setFriends(prevFriends =>
-          prevFriends.map(friend =>
-            friend._id === userId
-              ? { ...friend, status, lastSeen: status === 'offline' ? lastSeen : friend.lastSeen } // Update status and lastSeen if offline
+        
+        setFriends(prevFriends => 
+          prevFriends.map(friend => 
+            friend._id === userId 
+              ? { 
+                  ...friend, 
+                  status, 
+                  lastSeen: status === 'offline' ? lastSeen : friend.lastSeen 
+                } 
               : friend
           )
         );
-        // Optionally, update friendRequests state if needed (less common)
-        // setFriendRequests(prevRequests => ...);
       };
-
-      // Listen for the event
+      
       socket.on('user-status-change', handleStatusChange);
-
-      // Clean up the listener when the component unmounts or socket/user changes
+      
       return () => {
-        console.log("[FriendContext] Cleaning up socket listener for 'user-status-change'");
-        socket.off('user-status-change', handleStatusChange);
+        if (socket) {
+          console.log("[FriendContext] Cleaning up socket listener for 'user-status-change'");
+          socket.off('user-status-change', handleStatusChange);
+        }
       };
-    } else {
-       console.log("[FriendContext] Socket not available or user not logged in, skipping listener setup.");
-    }
-
-  }, [user?._id]); // Re-run when user ID changes (login/logout) or socket instance potentially changes (though getSocket should be stable after init)
-  // --- End of Socket Listener ---
-
+    }, 1000); // Delay to ensure socket is properly initialized
+    
+    return () => clearTimeout(timeoutId);
+  }, [user?._id, authLoading, isMounted]);
 
   // Function to send a friend request
   const sendRequest = async (email) => {
@@ -146,15 +207,15 @@ export const FriendProvider = ({ children }) => {
   const value = {
     friends,
     friendRequests,
-    loading,
+    loading: loading || authLoading, // Combine loading states
     error,
     fetchFriends,
     fetchFriendRequests,
     sendRequest,
     respondRequest,
     removeFriend,
-    setError, // Expose setError if needed
-  }
+    setError
+  };
 
   return <FriendContext.Provider value={value}>{children}</FriendContext.Provider>
 }

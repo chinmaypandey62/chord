@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import Link from "next/link"; // Changed from react-router-dom
+import { useRouter } from "next/navigation"; // Changed from react-router-dom
 import { useAuth } from "../../context/AuthContext";
 import Navbar from "../../components/Navbar/Navbar";
 import "./SignInPage.css"; // Import the CSS file
@@ -13,16 +14,27 @@ const SignInPage = () => {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { login, user, loading: authLoading } = useAuth();
+  const [isClient, setIsClient] = useState(false);
+  const router = useRouter(); // Changed from useNavigate
+  
+  // Safe access to auth context with fallback
+  const auth = useAuth() || {};
+  const login = auth.login;
+  const user = auth.user;
+  const authLoading = auth.loading ?? true;
+
+  // Set isClient to true after mounting
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
-    if (!authLoading && user) {
+    if (isClient && !authLoading && user) {
       console.log("User already authenticated, redirecting to dashboard");
-      navigate("/dashboard");
+      router.push("/dashboard"); // Changed from navigate
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, router, isClient]); // Updated dependency
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,6 +44,13 @@ const SignInPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Ensure we're on client side and login function exists
+    if (!isClient || !login) {
+      setError("Login service unavailable");
+      return;
+    }
+    
     setError("");
     setLoading(true);
 
@@ -90,7 +109,7 @@ const SignInPage = () => {
 
       if (result.success) {
         console.log("Login successful, navigating to dashboard...");
-        navigate("/dashboard");
+        router.push("/dashboard"); // Changed from navigate
       } else {
         setError(result.error || "Login failed. Please check your credentials.");
       }
@@ -103,10 +122,10 @@ const SignInPage = () => {
   };
 
   // Don't render the form if the user is authenticated and redirection is pending
-  if (authLoading || user) {
+  if (!isClient || authLoading || user) {
     return (
       <div className="signin-page loading-state">
-        {/* <Navbar /> */}
+        <Navbar />
         <div className="loading-spinner"></div>
         <p>Loading...</p>
       </div>
@@ -164,7 +183,7 @@ const SignInPage = () => {
 
           <div className="signin-footer">
             <p>
-              Don't have an account? <Link to="/signup">Sign Up</Link>
+              Don't have an account? <Link href="/signup">Sign Up</Link> {/* Changed to href */}
             </p>
           </div>
         </div>

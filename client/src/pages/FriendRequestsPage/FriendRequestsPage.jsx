@@ -7,22 +7,35 @@ import FriendRequestCard from "../../components/FriendRequestCard/FriendRequestC
 import "./FriendRequestsPage.css";
 
 const FriendRequestsPage = () => {
+  // Handle null context during SSR with default values
+  const friendsContext = useFriends() || {
+    friendRequests: [],
+    loading: true,
+    error: null,
+    fetchFriendRequests: () => {},
+    sendRequest: () => Promise.resolve(),
+    respondRequest: () => {}
+  };
+  
   const {
-    friendRequests: requests,  // Rename to match what's provided from context
+    friendRequests: requests,
     loading,
     error,
     fetchFriendRequests,
-    sendRequest,   // This is the correct function name from context
-    respondRequest,  // This is the correct function name from context
-  } = useFriends();  // Use the correct hook
+    sendRequest,
+    respondRequest,
+  } = friendsContext;
   
   const [friendEmail, setFriendEmail] = useState("");
   const [sendingRequest, setSendingRequest] = useState(false);
   const [requestStatus, setRequestStatus] = useState(null);
   
+  // Make sure fetchFriendRequests is only called on the client side
   useEffect(() => {
-    fetchFriendRequests();
-  }, []);
+    if (typeof window !== 'undefined' && fetchFriendRequests) {
+      fetchFriendRequests();
+    }
+  }, [fetchFriendRequests]);
 
   const handleSendRequest = async (e) => {
     e.preventDefault();
@@ -100,13 +113,13 @@ const FriendRequestsPage = () => {
                   Try Again
                 </button>
               </div>
-            ) : requests.length === 0 ? (
+            ) : requests && requests.length === 0 ? (
               <div className="empty-state">
                 <p>You don't have any pending friend requests.</p>
               </div>
             ) : (
               <div className="requests-list">
-                {requests.map((request) => (
+                {requests && requests.map((request) => (
                   <FriendRequestCard
                     key={request._id}
                     request={request}

@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-// Import useLocation
-import { useParams, useNavigate, useLocation } from "react-router-dom"
+// Replace React Router imports with Next.js
+import { useParams, useRouter } from "next/navigation"
 import axios from "../../utils/axios"
 import { useAuth } from "../../context/AuthContext"
 import { getSocket } from "../../utils/socket"
@@ -10,7 +10,7 @@ import Navbar from "../../components/Navbar/Navbar"
 import VideoPlayer from "../../components/VideoPlayer/VideoPlayer"
 import ChatBox from "../../components/ChatBox/ChatBox"
 import VideoCallParticipantsBar from "../../components/VideoCallParticipantsBar/VideoCallParticipantsBar"
-import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "../../../components/ui/avatar" // Fix import path
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
 import "./ChatRoomPage.css"
@@ -31,14 +31,24 @@ const formatLastSeen = (dateString) => {
 }
 
 const ChatRoomPage = () => {
-  const { roomId } = useParams()
-  const [room, setRoom] = useState(null)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const { user } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation() // Get location object
-
+  // Add check for server-side rendering
+  const isBrowser = typeof window !== 'undefined';
+  
+  const params = useParams();
+  const roomId = params?.roomId;
+  const [room, setRoom] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Safe destructuring from context
+  const authContext = useAuth() || {};
+  const { user } = authContext;
+  
+  const router = useRouter();
+  
+  // Since Next.js doesn't have useLocation, we'll use sessionStorage for state passing
+  const [startCallParams, setStartCallParams] = useState(null)
+  
   const [videoInput, setVideoInput] = useState("")
   const [currentVideoId, setCurrentVideoId] = useState("dQw4w9WgXcQ")
   const [videoDetails, setVideoDetails] = useState({
@@ -138,12 +148,22 @@ const ChatRoomPage = () => {
     }
   }, [])
 
-  // Store original favicon and title for restoration
-  const originalFaviconHref = useRef(document.querySelector("link[rel~='icon']")?.href)
-  const originalTitle = useRef(document.title)
-
+  // Store original favicon and title for restoration - FIX THIS PART
+  const originalFaviconHref = useRef(null);
+  const originalTitle = useRef(null);
+  
+  // Initialize the refs after component mounts on client
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      originalFaviconHref.current = document.querySelector("link[rel~='icon']")?.href;
+      originalTitle.current = document.title;
+    }
+  }, []);
+  
   // --- WebRTC/Socket.IO signaling logic ---
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    
     const socket = getSocket()
     if (!socket) return
 
@@ -227,28 +247,34 @@ const ChatRoomPage = () => {
       socket.off("call-ice-candidate")
       socket.off("call-hangup")
       socket.off("call-decline")
-      // Restore favicon and title on cleanup
-      const favicon = document.querySelector("link[rel~='icon']")
-      if (favicon && favicon.dataset.prevHref) {
-        favicon.href = favicon.dataset.prevHref
-        delete favicon.dataset.prevHref
+      // Restore favicon and title on cleanup - FIX THIS PART
+      if (typeof document !== 'undefined') {
+        const favicon = document.querySelector("link[rel~='icon']")
+        if (favicon && favicon.dataset.prevHref) {
+          favicon.href = favicon.dataset.prevHref
+          delete favicon.dataset.prevHref
+        }
+        if (originalTitle.current) {
+          document.title = originalTitle.current
+        }
       }
-      document.title = originalTitle.current
     }
     // eslint-disable-next-line
   }, [peerConnection, room, audioUnlocked, roomId])
 
   // Restore favicon and title when call is accepted/declined/ended
   useEffect(() => {
-    if (!callIncoming) {
-      const favicon = document.querySelector("link[rel~='icon']")
-      if (favicon && favicon.dataset.prevHref) {
-        favicon.href = favicon.dataset.prevHref
-        delete favicon.dataset.prevHref
-      }
+    if (typeof document === 'undefined' || callIncoming) return;
+    
+    const favicon = document.querySelector("link[rel~='icon']")
+    if (favicon && favicon.dataset.prevHref) {
+      favicon.href = favicon.dataset.prevHref
+      delete favicon.dataset.prevHref
+    }
+    if (originalTitle.current) {
       document.title = originalTitle.current
     }
-  }, [callIncoming])
+  }, [callIncoming]);
 
   // Stop sound when call is accepted/declined/ended
   useEffect(() => {
@@ -258,8 +284,10 @@ const ChatRoomPage = () => {
     }
   }, [callIncoming])
 
-  // Start a call (initiator)
+  // Start a call (initiator) - Add browser check
   const startCall = async (targetUserId) => {
+    if (!isBrowser) return;
+    
     const socket = getSocket()
     if (!socket) return
     const pc = createPeerConnection(socket, targetUserId)
@@ -281,8 +309,10 @@ const ChatRoomPage = () => {
     }
   }
 
-  // Accept incoming call
+  // Accept incoming call - Add browser check
   const acceptCall = async () => {
+    if (!isBrowser) return;
+    
     setCallIncoming(false)
     setCallActive(true)
     setIsLocalVideoMain(false) // Ensure remote is main view initially
@@ -381,7 +411,7 @@ const ChatRoomPage = () => {
       console.log("[WebRTC] Received remote track:", event.track.kind, "Stream IDs:", event.streams.map(s => s.id));
       // Always create a new MediaStream from all tracks in event.streams[0]
       if (event.streams && event.streams[0]) {
-        console.log("[WebRTC] Setting remote stream from event.streams[0]");
+        console.log("[WebRTC] Setting remote stream from event.streams[0]")
         setRemoteStream(event.streams[0]);
       } else {
         // Fallback: build stream from tracks (less common now)
@@ -414,29 +444,31 @@ const ChatRoomPage = () => {
 
   // --- UseEffects ---
 
-  // New useEffect to handle automatic call initiation
+  // New useEffect to handle automatic call initiation - modified for Next.js
   useEffect(() => {
-    // Check if we should start a call based on navigation state
-    if (location.state?.startCall && user && room?.members?.length === 2 && !callActive && !callIncoming) {
-      const targetUserId = location.state.targetUserId;
-      const otherParticipant = room.members.find(m => m._id === targetUserId && m._id !== user._id);
-
-      if (otherParticipant) {
-        console.log(`[ChatRoomPage] Auto-starting call to ${targetUserId} based on navigation state.`);
-        startCall(otherParticipant._id);
-
-        // Clear the state after initiating the call to prevent re-triggering
-        // Use replace to avoid adding a new entry to the history stack
-        navigate(location.pathname, { replace: true, state: {} });
-      } else {
-         console.warn("[ChatRoomPage] Auto-start call requested, but target user not found or is self.");
-         // Clear state anyway if target is invalid
-         navigate(location.pathname, { replace: true, state: {} });
+    // Check if we should start a call based on sessionStorage state
+    const callData = sessionStorage.getItem('callData')
+    if (callData) {
+      try {
+        const { startCall, targetUserId } = JSON.parse(callData)
+        if (startCall && user && room?.members?.length === 2 && !callActive && !callIncoming) {
+          const otherParticipant = room.members.find(m => m._id === targetUserId && m._id !== user._id);
+          
+          if (otherParticipant) {
+            console.log(`[ChatRoomPage] Auto-starting call to ${targetUserId} based on stored state.`);
+            startCall(otherParticipant._id);
+          } else {
+             console.warn("[ChatRoomPage] Auto-start call requested, but target user not found or is self.");
+          }
+        }
+        // Clear the data after processing
+        sessionStorage.removeItem('callData');
+      } catch (e) {
+        console.error("Error parsing call data:", e);
+        sessionStorage.removeItem('callData');
       }
     }
-     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.state, user, room, callActive, callIncoming, navigate]); // Dependencies: state, user, room, call status
-
+  }, [user, room, callActive, callIncoming]); // Dependencies adjusted for Next.js
 
   useEffect(() => {
     // Assign streams to mobile video elements when they become available or view switches
@@ -588,8 +620,14 @@ const ChatRoomPage = () => {
     }
   }, [])
 
+  // Fetch room details - Add roomId safety check
   const fetchRoomDetails = async () => {
-    if (!roomId) return
+    if (!roomId) {
+      setError("Room ID is missing");
+      setInitialLoading(false);
+      return;
+    }
+    
     setInitialLoading(true)
     setError(null)
     try {
@@ -675,7 +713,10 @@ const ChatRoomPage = () => {
       <div className="error-container">
         <Navbar />
         <p>Error loading room: {error}</p>
-        <button className="btn btn-secondary" onClick={() => navigate("/dashboard")}>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => router.push("/dashboard")}
+        >
           Back to Dashboard
         </button>
       </div>

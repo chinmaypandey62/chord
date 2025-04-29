@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "../src/context/AuthContext";
-import { FriendProvider } from "../src/context/FriendContext";
-import { ThemeProvider } from "../src/components/theme-provider";
+import "../src/styles/globals.css";
+import ClientProvider from "../src/components/ClientProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,9 +21,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -35,8 +34,8 @@ export default function RootLayout({
         {/* PNG Favicons (Optional but recommended) */}
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        {/* Web App Manifest */}
-        <link rel="manifest" href="/site.webmanifest" />
+        {/* Remove or comment out the manifest line until you have the file */}
+        {/* <link rel="manifest" href="/site.webmanifest" /> */}
         {/* Safari Pinned Tab */}
         <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
         {/* Microsoft Tiles */}
@@ -44,23 +43,12 @@ export default function RootLayout({
         {/* Theme Color for Browser UI */}
         <meta name="theme-color" content="#ffffff" />
       </head>
-
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <FriendProvider>
-              {children}
-            </FriendProvider>
-          </AuthProvider>
-        </ThemeProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {/* ClientProvider handles all the client-side context providers */}
+        <ClientProvider>
+          {children}
+        </ClientProvider>
       </body>
     </html>
-  );
+  )
 }

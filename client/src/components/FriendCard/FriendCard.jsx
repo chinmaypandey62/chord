@@ -1,15 +1,20 @@
 "use client"
 
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useRouter } from "next/navigation" // Changed from react-router-dom
 import axios from "../../utils/axios"
 import { BsChatDots, BsCameraVideo } from "react-icons/bs"; // Import icons
 import "./FriendCard.css"
 
 const FriendCard = ({ friend, onStatusChange }) => {
+  // Add safety check for server-side rendering
+  if (typeof window === 'undefined' || !friend) {
+    return <div className="friend-card loading">Loading friend data...</div>
+  }
+
   const [loadingChat, setLoadingChat] = useState(false)
   const [loadingCall, setLoadingCall] = useState(false) // Separate loading state for call
-  const navigate = useNavigate()
+  const router = useRouter() // Changed from navigate
 
   const startChat = async () => {
     try {
@@ -21,7 +26,7 @@ const FriendCard = ({ friend, onStatusChange }) => {
 
       // Navigate to the chat room using the returned room's _id
       if (response.data && response.data._id) {
-        navigate(`/chat/${response.data._id}`)
+        router.push(`/chat/${response.data._id}`) // Changed to router.push
       } else {
         throw new Error("Failed to get room ID from response.")
       }
@@ -45,7 +50,9 @@ const FriendCard = ({ friend, onStatusChange }) => {
       if (response.data && response.data._id) {
         const roomId = response.data._id
         // 2. Navigate to the room with state to initiate call
-        navigate(`/chat/${roomId}`, { state: { startCall: true, targetUserId: friend._id } })
+        // Next.js doesn't support location state directly, so we'll use query params or sessionStorage
+        sessionStorage.setItem('callData', JSON.stringify({ startCall: true, targetUserId: friend._id }))
+        router.push(`/chat/${roomId}`) // Changed to router.push
       } else {
         throw new Error("Failed to get room ID from response.")
       }

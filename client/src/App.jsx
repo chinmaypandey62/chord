@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom"
+import { usePathname, useRouter } from "next/navigation" // Replace React Router with Next.js navigation
 import { AuthProvider, useAuth } from "./context/AuthContext"
-// import { SocketProvider } from "./context/SocketContext"; // <-- Removed import
-import { ThemeProvider } from "./components/theme-provider" // Ensure this path is correct
+import { ThemeProvider } from "./components/theme-provider"
 import { FriendProvider } from "./context/FriendContext"
 import { Toaster } from "sonner"
 import { getSocket } from "./utils/socket"
@@ -22,17 +21,19 @@ import NotFoundPage from "./pages/NotFoundPage/NotFoundPage"
 
 // Styles
 import "./App.css"
-import "./styles/globals.css" // Ensure global styles are imported
-
+import "./styles/globals.css"
 
 function App() {
   const [isClient, setIsClient] = useState(false)
   const [socketReady, setSocketReady] = useState(false)
+  const pathname = usePathname() || '/'
+  const auth = useAuth() || {}
+  const { user, loading } = auth
+  const router = useRouter()
 
+  // Set client state on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsClient(true)
-    }
+    setIsClient(true)
   }, [])
 
   // Wait for socket to be initialized before attaching listeners
@@ -49,7 +50,7 @@ function App() {
   }, [isClient])
 
   useEffect(() => {
-    if (!socketReady) return
+    if (!socketReady || !isClient) return
     const socket = getSocket()
     if (!socket) return
 
@@ -127,93 +128,101 @@ function App() {
       socket.off("call-decline", window.__globalCallDeclineHandler)
       socket.off("call-hangup", window.__globalCallHangupHandler)
     }
-  }, [socketReady])
+  }, [socketReady, isClient])
 
-  if (!isClient) return null
-
-  // Create a ProtectedRoute component to wrap protected routes
-  const ProtectedRoute = ({ children }) => {
-    const { user, loading } = useAuth()
-    const navigate = useNavigate()
-
-    useEffect(() => {
-      // Redirect only if loading is finished and there's no user
-      if (!loading && !user) {
-        console.log("Access to protected route blocked - redirecting to login")
-        navigate("/signin", { replace: true }) // Use replace to avoid back button issues
-      }
-    }, [user, loading, navigate])
-
-    // Show loading state while checking authentication
-    if (loading) {
-      // You might want a more sophisticated loading indicator here
-      return <div>Loading Session...</div>
+  // Protected route logic - only run on client side
+  useEffect(() => {
+    if (!isClient) return
+    
+    // Check if the current route needs protection
+    const protectedRoutes = ['/dashboard', '/friends', '/profile'];
+    const isChatRoute = pathname?.startsWith('/chat/');
+    const needsProtection = protectedRoutes.includes(pathname) || isChatRoute;
+    
+    // Redirect to login if accessing protected route without auth
+    if (needsProtection && !loading && !user) {
+      console.log("Access to protected route blocked - redirecting to login")
+      router.replace("/signin")
     }
+  }, [user, loading, pathname, router, isClient]);
 
-    // Only render children if authenticated (user exists)
-    // If loading is false and user is null, the useEffect above will trigger navigation
-    return user ? children : null // Render null while redirecting
+  if (!isClient) {
+    // Return a minimal loading UI during SSR
+    return <div className="app-loading">Loading application...</div>
   }
+  
+  // Show loading state while checking authentication on protected routes
+  const protectedRoutes = ['/dashboard', '/friends', '/profile'];
+  const isChatRoute = pathname?.startsWith('/chat/');
+  const needsProtection = protectedRoutes.includes(pathname) || isChatRoute;
+  
+  if (loading && needsProtection) {
+    return <div>Loading Session...</div>
+  }
+
+  // Render content based on current pathname
+  const renderContent = () => {
+    // Extract roomId for chat routes
+    const roomId = isChatRoute ? pathname.split('/').pop() : null;
+    
+    // Only render protected content if user exists
+    if (needsProtection && !user) {
+      return null; // Will redirect via useEffect
+    }
+    
+    switch (pathname) {
+      case '/':
+        return <LandingPage />;
+      case '/signin':
+        return <SignInPage />;
+      case '/signup':
+        return <SignUpPage />;
+      case '/dashboard':
+        return <DashboardPage />;
+      case '/friends':
+        return <FriendRequestsPage />;
+      case '/profile':
+        return <ProfilePage />;
+      default:
+        if (isChatRoute) {
+          return <ChatRoomPage roomId={roomId} />;
+        }
+        return <NotFoundPage />;
+    }
+  };
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <AuthProvider>
-        {/* <SocketProvider> */}
-          <FriendProvider>
-            <Router>
-              <div className="app">
-                {/* Add Toaster at the root so toasts show on any page */}
-                <Toaster position="top-center" richColors />
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/signin" element={<SignInPage />} />
-                  <Route path="/signup" element={<SignUpPage />} />
-
-                  {/* Protected routes */}
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <DashboardPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/friends"
-                    element={
-                      <ProtectedRoute>
-                        <FriendRequestsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute>
-                        <ProfilePage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/chat/:roomId"
-                    element={
-                      <ProtectedRoute>
-                        <ChatRoomPage />
-                      </ProtectedRoute>
-                    }
-                  />
-
-                  {/* 404 route */}
-                  <Route path="*" element={<NotFoundPage />} />
-                </Routes>
-              </div>
-            </Router>
-          </FriendProvider>
-        {/* </SocketProvider> */}
-      </AuthProvider>
+      <div className="app">
+        {/* Add Toaster at the root so toasts show on any page */}
+        <Toaster position="top-center" richColors />
+        {renderContent()}
+      </div>
     </ThemeProvider>
   )
 }
 
-export default App
+// Update the default export to properly wrap with providers
+function AppWithProviders() {
+  // Add client-side only rendering for the app and its providers
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+  
+  if (!mounted) {
+    // Return minimal UI during SSR
+    return <div className="app-initial-loading">Loading...</div>
+  }
+  
+  return (
+    <AuthProvider>
+      <FriendProvider>
+        <App />
+      </FriendProvider>
+    </AuthProvider>
+  );
+}
+
+export default AppWithProviders;
