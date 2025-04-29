@@ -1,45 +1,63 @@
-import axios from "axios";
+import axios from 'axios';
 
-// Create an Axios instance
+// Determine base URL from environment variables
+const getBaseUrl = () => {
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_LOCAL_API_URL || 'http://localhost:5000/api';
+  }
+  
+  // Use the production URL when not on localhost
+  if (window.location.hostname !== 'localhost') {
+    return process.env.NEXT_PUBLIC_API_URL || 'https://app-chord-api.onrender.com/api';
+  }
+  
+  // Default to local URL for localhost
+  return process.env.NEXT_PUBLIC_LOCAL_API_URL || 'http://localhost:5000/api';
+};
+
+// Create axios instance with dynamic base URL
 const instance = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api`, // e.g., http://localhost:5000/api
-  withCredentials: true, // ✅ Send cookies (for httpOnly JWTs)
+  baseURL: getBaseUrl(),
+  timeout: 10000,
+  withCredentials: true // Important for cookies
 });
 
-// Optional: Log outgoing requests for debugging
+// Add request interceptor to attach the JWT token
 instance.interceptors.request.use(
   (config) => {
-    console.log("Axios interceptor - Request URL:", config.url); // Log request URL
+    // Log request URL for debugging
+    console.log('Axios interceptor - Request URL:', config.url);
+    
+    // Only add Authorization header if we have a token in localStorage
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('Axios interceptor - Adding Authorization header');
+      } else {
+        console.log('Axios interceptor - No token found in localStorage');
+      }
+    }
+    
     return config;
   },
   (error) => {
+    console.error('Axios request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Log response errors
-axios.interceptors.response.use(
+// Add response interceptor for better error handling
+instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response) {
-      console.error(
-        "Axios response error:",
-        error.response.status,
-        error.response.data
-      );
-    } else if (error.request) {
-      // Show more details for debugging
-      console.error(
-        "Axios response error: No response received",
-        {
-          url: error.config?.url,
-          method: error.config?.method,
-          data: error.config?.data,
-          request: error.request
-        }
-      );
-    } else {
-      console.error("Axios response error: Request setup error", error.message);
+    // Handle 401 Unauthorized errors (expired/invalid token)
+    if (error.response && error.response.status === 401) {
+      console.log('Axios interceptor - 401 Unauthorized response');
+      if (typeof window !== 'undefined') {
+        // Clear token from localStorage
+        localStorage.removeItem('token');
+      }
     }
     return Promise.reject(error);
   }
