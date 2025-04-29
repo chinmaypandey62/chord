@@ -30,12 +30,18 @@ const formatLastSeen = (dateString) => {
   }
 }
 
-const ChatRoomPage = () => {
+/**
+ * Chat Room Page Component
+ * @param {Object} props - Component props
+ * @param {string|string[]} [props.roomId] - Room ID passed from parent component
+ */
+const ChatRoomPage = ({ roomId: propRoomId }) => {
   // Add check for server-side rendering
   const isBrowser = typeof window !== 'undefined';
   
   const params = useParams();
-  const roomId = params?.roomId;
+  // Use prop roomId if provided, otherwise use from params
+  const roomId = propRoomId || params?.roomId;
   const [room, setRoom] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -447,28 +453,49 @@ const ChatRoomPage = () => {
   // New useEffect to handle automatic call initiation - modified for Next.js
   useEffect(() => {
     // Check if we should start a call based on sessionStorage state
-    const callData = sessionStorage.getItem('callData')
-    if (callData) {
+    const callDataString = sessionStorage.getItem('callData');
+    console.log('[ChatRoomPage] Retrieved call data from sessionStorage:', callDataString);
+    
+    if (!isBrowser || !roomId) return;
+    
+    if (callDataString) {
       try {
-        const { startCall, targetUserId } = JSON.parse(callData)
-        if (startCall && user && room?.members?.length === 2 && !callActive && !callIncoming) {
-          const otherParticipant = room.members.find(m => m._id === targetUserId && m._id !== user._id);
+        const callData = JSON.parse(callDataString);
+        console.log('[ChatRoomPage] Parsed call data:', callData);
+        
+        if (callData.startCall && user && room?.members?.length === 2 && !callActive && !callIncoming) {
+          console.log('[ChatRoomPage] Call conditions met, finding target user:', callData.targetUserId);
+          const otherParticipant = room.members.find(m => m._id === callData.targetUserId && m._id !== user._id);
           
           if (otherParticipant) {
-            console.log(`[ChatRoomPage] Auto-starting call to ${targetUserId} based on stored state.`);
-            startCall(otherParticipant._id);
+            console.log(`[ChatRoomPage] Found target user, initiating call to ${otherParticipant._id}`);
+            // Add a small delay to ensure everything is ready
+            setTimeout(() => {
+              startCall(otherParticipant._id);
+            }, 1000);
           } else {
-             console.warn("[ChatRoomPage] Auto-start call requested, but target user not found or is self.");
+            console.warn("[ChatRoomPage] Auto-start call requested, but target user not found or is self.");
+            console.log("[ChatRoomPage] Room members:", room.members);
+            console.log("[ChatRoomPage] Current user:", user);
           }
+        } else {
+          console.log('[ChatRoomPage] Call conditions not met:', {
+            hasCallData: !!callData.startCall,
+            hasUser: !!user,
+            roomMemberCount: room?.members?.length,
+            callActive,
+            callIncoming
+          });
         }
         // Clear the data after processing
         sessionStorage.removeItem('callData');
+        console.log('[ChatRoomPage] Cleared call data from sessionStorage');
       } catch (e) {
-        console.error("Error parsing call data:", e);
+        console.error("[ChatRoomPage] Error parsing call data:", e);
         sessionStorage.removeItem('callData');
       }
     }
-  }, [user, room, callActive, callIncoming]); // Dependencies adjusted for Next.js
+  }, [user, room, callActive, callIncoming, isBrowser, roomId]); // Dependencies adjusted for Next.js
 
   useEffect(() => {
     // Assign streams to mobile video elements when they become available or view switches
@@ -620,7 +647,7 @@ const ChatRoomPage = () => {
     }
   }, [])
 
-  // Fetch room details - Add roomId safety check
+  // Fetch room details - Ensure roomId is valid
   const fetchRoomDetails = async () => {
     if (!roomId) {
       setError("Room ID is missing");
@@ -628,8 +655,8 @@ const ChatRoomPage = () => {
       return;
     }
     
-    setInitialLoading(true)
-    setError(null)
+    setInitialLoading(true);
+    setError(null);
     try {
       console.log(`[ChatRoomPage] Fetching room details for ${roomId}`)
       const response = await axios.get(`/rooms/${roomId}`)

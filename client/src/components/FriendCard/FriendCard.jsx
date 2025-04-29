@@ -38,10 +38,12 @@ const FriendCard = ({ friend, onStatusChange }) => {
     }
   }
 
-  // Modified startVideoCall function
+  // Modified startVideoCall function with improved logging
   const startVideoCall = async () => {
     try {
       setLoadingCall(true)
+      console.log(`[FriendCard] Starting video call with friend: ${friend.username} (${friend._id})`);
+      
       // 1. Create/Get the room
       const response = await axios.post("/rooms/create", {
         participants: [friend._id],
@@ -49,18 +51,29 @@ const FriendCard = ({ friend, onStatusChange }) => {
 
       if (response.data && response.data._id) {
         const roomId = response.data._id
-        // 2. Navigate to the room with state to initiate call
-        // Next.js doesn't support location state directly, so we'll use query params or sessionStorage
-        sessionStorage.setItem('callData', JSON.stringify({ startCall: true, targetUserId: friend._id }))
-        router.push(`/chat/${roomId}`) // Changed to router.push
+        console.log(`[FriendCard] Created/retrieved room: ${roomId}`);
+        
+        // 2. Store call data with improved error handling
+        try {
+          const callData = { startCall: true, targetUserId: friend._id };
+          sessionStorage.setItem('callData', JSON.stringify(callData));
+          console.log(`[FriendCard] Stored call data in sessionStorage:`, callData);
+        } catch (storageError) {
+          console.error(`[FriendCard] Failed to store call data:`, storageError);
+          // Continue anyway, the user can manually start the call
+        }
+        
+        // 3. Navigate to the chat room
+        console.log(`[FriendCard] Navigating to chat room: /chat/${roomId}`);
+        router.push(`/chat/${roomId}`);
       } else {
         throw new Error("Failed to get room ID from response.")
       }
     } catch (error) {
-      console.error("Error initiating video call:", error)
-      alert("Failed to initiate video call. Please try again.")
+      console.error("[FriendCard] Error initiating video call:", error);
+      alert("Failed to initiate video call. Please try again.");
     } finally {
-      setLoadingCall(false)
+      setLoadingCall(false);
     }
   }
 

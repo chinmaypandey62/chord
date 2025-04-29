@@ -21,5 +21,6 @@ export default function ChatRoom() {
   if (loading) return <div>Loading Session...</div>
   if (!user) return null // Will redirect in useEffect
   
+  // Now properly typed as the component accepts this prop
   return <ChatRoomPage roomId={roomId} />
 }
