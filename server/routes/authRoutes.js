@@ -1,19 +1,19 @@
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";
-import { login, register, logout, checkAuth } from "../controllers/authController.js";
+import * as authController from "../controllers/authController.js";
 
 const router = express.Router();
 
 // POST /api/auth/login
-router.post("/login", login);
+router.post("/login", authController.login);
 
 // POST /api/auth/register
-router.post("/register", register);
+router.post("/register", authController.register);
 
 // POST /api/auth/logout
-router.post("/logout", logout);
+router.post("/logout", authController.logout);
 
-// GET /api/auth/check-auth (protected route)
-router.get("/verify", protect, checkAuth);
+// GET /api/auth/verify (protected route)
+router.get('/verify', protect, authController.verifyToken);
 
 export default router;

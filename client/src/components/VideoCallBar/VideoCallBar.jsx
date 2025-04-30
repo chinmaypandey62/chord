@@ -23,17 +23,43 @@ const VideoCallBar = ({
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
 
+  // Enhanced useEffect for handling local stream
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream
+    if (localVideoRef.current) {
+      if (localStream) {
+        localVideoRef.current.srcObject = localStream;
+      } else {
+        // Explicitly clear srcObject when stream becomes null
+        localVideoRef.current.srcObject = null;
+      }
     }
   }, [localStream])
 
+  // Enhanced useEffect for handling remote stream
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream
+    if (remoteVideoRef.current) {
+      if (remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      } else {
+        // Explicitly clear srcObject when stream becomes null
+        remoteVideoRef.current.srcObject = null;
+      }
     }
   }, [remoteStream])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Clear video elements when component unmounts
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+      }
+      
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null;
+      }
+    };
+  }, [])
 
   // Find another user to call (for demo: first other member)
   // Add additional safety checks

@@ -30,27 +30,109 @@ const VideoCallParticipantsBar = ({
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
 
+  // NEW: Add direct video element stream attachment for reliability
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream
+    console.log("[VideoCallParticipantsBar] remoteStream changed:", !!remoteStream);
+    
+    // Find all video elements that might need the remote stream
+    if (remoteStream) {
+      // Force direct srcObject assignment
+      const setVideoStream = () => {
+        try {
+          // 1. Try the ref approach
+          if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== remoteStream) {
+            console.log("[VideoCallParticipantsBar] Setting remoteVideoRef.current.srcObject");
+            remoteVideoRef.current.srcObject = remoteStream;
+            
+            // Force autoplay
+            remoteVideoRef.current.play().catch(e => 
+              console.warn("[VideoCallParticipantsBar] Could not autoplay:", e)
+            );
+          }
+          
+          // 2. Try direct DOM query as fallback
+          const allVideoElements = document.querySelectorAll('.participant-video-box video:not([muted])');
+          console.log(`[VideoCallParticipantsBar] Found ${allVideoElements.length} non-muted video elements`);
+          
+          allVideoElements.forEach((videoEl, index) => {
+            if (videoEl.srcObject !== remoteStream) {
+              console.log(`[VideoCallParticipantsBar] Setting srcObject on video element ${index}`);
+              videoEl.srcObject = remoteStream;
+              videoEl.play().catch(e => console.warn(`[VideoCallParticipantsBar] Could not autoplay element ${index}:`, e));
+            }
+          });
+        } catch (err) {
+          console.error("[VideoCallParticipantsBar] Error setting video streams:", err);
+        }
+      };
+      
+      // Call immediately and with a small delay to ensure DOM is ready
+      setVideoStream();
+      setTimeout(setVideoStream, 100);
+      setTimeout(setVideoStream, 500); // One more attempt after 500ms
     }
-  }, [localStream])
+  }, [remoteStream]);
+
+  // Enhanced useEffects with better stream handling
+  useEffect(() => {
+    if (localVideoRef.current) {
+      console.log("[ParticipantsBar] Setting local video srcObject:", !!localStream);
+      if (localStream) {
+        localVideoRef.current.srcObject = localStream;
+        
+        // Ensure video plays
+        localVideoRef.current.play().catch(err => {
+          console.warn("[ParticipantsBar] Local video autoplay failed:", err);
+        });
+      } else {
+        localVideoRef.current.srcObject = null;
+      }
+    }
+  }, [localStream]);
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream
+    if (remoteVideoRef.current) {
+      console.log("[ParticipantsBar] Setting remote video srcObject:", !!remoteStream);
+      if (remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        
+        // Ensure video plays
+        remoteVideoRef.current.play().catch(err => {
+          console.warn("[ParticipantsBar] Remote video autoplay failed:", err);
+        });
+      } else {
+        remoteVideoRef.current.srcObject = null;
+      }
     }
-  }, [remoteStream])
+  }, [remoteStream]);
 
-  // Helper: get participant display
+  // Enhanced cleanup for unmount
+  useEffect(() => {
+    return () => {
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = null;
+      }
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = null;
+      }
+    };
+  }, []);
+
+  // Enhanced helper for participant box rendering with fixed syntax
   const renderParticipantBox = (participant) => {
     if (!participant || !participant._id) return null;
     
-    const isSelf = participant._id === user._id
-    const isOnline = participant.status === "online"
-    // Show video if call is active and this is self or remote
-    if (callActive) {
-      if (isSelf && localStream) {
+    const isSelf = participant._id === user._id;
+    const isOnline = participant.status === "online";
+    
+    // ✅ FIX: Improved call participation detection
+    // Check if this participant should be in the call (either self or the remote user)
+    const isCallParticipant = callActive && (isSelf || participant._id === remoteUser);
+    
+    // Only show video UI if call is active AND this participant is part of the call
+    if (isCallParticipant) {
+      if (isSelf) {
+        // Local participant - show self video
         return (
           <div className="participant-video-box" key={participant._id} style={{ position: "relative" }}>
             {/* Online indicator */}
@@ -71,19 +153,41 @@ const VideoCallParticipantsBar = ({
                 title="Online"
               />
             )}
+            
+            {/* Local video - always show if in call */}
             <video
               ref={localVideoRef}
               autoPlay
-              muted
               playsInline
-              style={{ width: "100%", height: "100%", borderRadius: 8, background: "#222" }}
+              muted
+              style={{ 
+                width: "100%", 
+                height: "100%", 
+                borderRadius: 8, 
+                background: "#222",
+                objectFit: "cover"
+              }}
               onDoubleClick={() => onParticipantVideoDoubleClick && onParticipantVideoDoubleClick(participant._id)}
             />
             <div className="participant-video-username">{participant.username || "You"}</div>
+            
+            {/* Stream status indicator */}
+            <div style={{
+              position: "absolute",
+              bottom: 4,
+              right: 4,
+              fontSize: "9px",
+              background: "rgba(0,0,0,0.5)",
+              color: localStream ? "#4ade80" : "#f87171",
+              padding: "2px 4px",
+              borderRadius: 4
+            }}>
+              {localStream ? "Active" : "No Stream"}
+            </div>
           </div>
-        )
-      }
-      if (!isSelf && remoteStream && remoteUser === participant._id) {
+        );
+      } else {
+        // Remote participant - show their video if available
         return (
           <div className="participant-video-box" key={participant._id} style={{ position: "relative" }}>
             {/* Online indicator */}
@@ -104,18 +208,68 @@ const VideoCallParticipantsBar = ({
                 title="Online"
               />
             )}
+            
+            {/* Add a placeholder while waiting for remote stream */}
+            {!remoteStream && (
+              <div style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#222",
+                borderRadius: 8,
+                zIndex: 1
+              }}>
+                <div style={{ textAlign: "center" }}>
+                  <Avatar className="h-12 w-12 mx-auto mb-2">
+                    <AvatarImage src={participant.profilePicture || undefined} alt={participant.username} />
+                    <AvatarFallback>{participant.username?.substring(0, 2).toUpperCase() || "??"}</AvatarFallback>
+                  </Avatar>
+                  <div style={{ color: "#fff", fontSize: "12px" }}>Connecting...</div>
+                </div>
+              </div>
+            )}
+            
+            {/* Remote video element - always render it to be ready for stream */}
             <video
               ref={remoteVideoRef}
               autoPlay
               playsInline
-              style={{ width: "100%", height: "100%", borderRadius: 8, background: "#222" }}
+              style={{ 
+                width: "100%", 
+                height: "100%", 
+                borderRadius: 8, 
+                background: "#222",
+                objectFit: "cover",
+                visibility: remoteStream ? "visible" : "hidden" // Hide video until stream available
+              }}
               onDoubleClick={() => onParticipantVideoDoubleClick && onParticipantVideoDoubleClick(participant._id)}
             />
             <div className="participant-video-username">{participant.username}</div>
+            
+            {/* Stream status indicator - improved */}
+            <div style={{
+              position: "absolute",
+              bottom: 4,
+              right: 4,
+              fontSize: "9px",
+              background: "rgba(0,0,0,0.5)",
+              color: remoteStream ? "#4ade80" : "#f87171",
+              padding: "2px 4px",
+              borderRadius: 4,
+              zIndex: 3 // Ensure it's above other elements
+            }}>
+              {remoteStream ? "Connected" : "Connecting..."}
+            </div>
           </div>
-        )
+        );
       }
     }
+    
     // Otherwise, just show avatar and name
     return (
       <div className="participant-video-box" key={participant._id} style={{ position: "relative" }}>
@@ -145,7 +299,7 @@ const VideoCallParticipantsBar = ({
         </div>
         <div className="participant-video-username">{isSelf ? "You" : participant.username}</div>
       </div>
-    )
+    );
   }
 
   // Only show controls if there are other members

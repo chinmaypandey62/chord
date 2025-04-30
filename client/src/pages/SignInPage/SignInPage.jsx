@@ -124,7 +124,8 @@ const SignInPage = () => {
   // Don't render the form if the user is authenticated and redirection is pending
   if (!isClient || authLoading || user) {
     return (
-      <div className="signin-page loading-state" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}>
+      <div className="signin-page loading-state">
+        <Navbar />
         <div className="loading-spinner"></div>
         <p>Loading...</p>
       </div>

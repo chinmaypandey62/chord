@@ -200,7 +200,7 @@ const ChatRoomPage = ({ roomId: propRoomId }) => {
     });
 
     socket.on("call-ice-candidate", async ({ candidate }) => {
-      console.log("[WebRTC] Received ICE candidate:", candidate); // Log reception
+     
       if (peerConnection && candidate) {
         try {
           await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
@@ -290,163 +290,334 @@ const ChatRoomPage = ({ roomId: propRoomId }) => {
     }
   }, [callIncoming])
 
-  // Start a call (initiator) - Add browser check
-  const startCall = async (targetUserId) => {
-    if (!isBrowser) return;
+  // Improved useEffect for the mobile video elements
+  useEffect(() => {
+    // Assign streams to mobile video elements when they become available or view switches
+    const updateMobileVideoElements = () => {
+      console.log("[ChatRoomPage] Updating mobile video elements. Local:", !!localStream, "Remote:", !!remoteStream);
+      
+      const mainVideoEl = isLocalVideoMain ? mobileLocalVideoRef.current : mobileRemoteVideoRef.current;
+      const floatingVideoEl = isLocalVideoMain ? mobileRemoteVideoRef.current : mobileLocalVideoRef.current;
+      const mainStream = isLocalVideoMain ? localStream : remoteStream;
+      const floatingStream = isLocalVideoMain ? remoteStream : localStream;
+
+      // Set main video
+      if (mainVideoEl && mainStream && mainVideoEl.srcObject !== mainStream) {
+        console.log("[ChatRoomPage] Setting main video srcObject");
+        mainVideoEl.srcObject = mainStream;
+        mainVideoEl.play().catch(e => console.warn("[ChatRoomPage] Could not play main video:", e));
+      }
+      
+      // Set floating video
+      if (floatingVideoEl && floatingStream && floatingVideoEl.srcObject !== floatingStream) {
+        console.log("[ChatRoomPage] Setting floating video srcObject");
+        floatingVideoEl.srcObject = floatingStream;
+        floatingVideoEl.play().catch(e => console.warn("[ChatRoomPage] Could not play floating video:", e));
+      }
+      
+      // Clear srcObject if stream becomes null
+      if (mainVideoEl && !mainStream && mainVideoEl.srcObject) {
+        console.log("[ChatRoomPage] Clearing main video srcObject");
+        mainVideoEl.srcObject = null;
+      }
+      
+      if (floatingVideoEl && !floatingStream && floatingVideoEl.srcObject) {
+        console.log("[ChatRoomPage] Clearing floating video srcObject");
+        floatingVideoEl.srcObject = null;
+      }
+    };
     
-    const socket = getSocket()
-    if (!socket) return
-    const pc = createPeerConnection(socket, targetUserId)
-    setPeerConnection(pc)
-    setCallActive(true)
-    setRemoteUser(targetUserId)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      setLocalStream(stream)
-      stream.getTracks().forEach(track => pc.addTrack(track, stream))
-      const offer = await pc.createOffer()
-      await pc.setLocalDescription(offer)
-      // Always include roomId in the call-offer payload
-      socket.emit("call-offer", { to: targetUserId, offer, roomId })
-      console.log("[VideoCall] Sent call-offer", { to: targetUserId, roomId })
-    } catch (e) {
-      alert("Could not start video call: " + e.message)
-      endCall()
-    }
-  }
-
-  // Accept incoming call - Add browser check
-  const acceptCall = async () => {
-    if (!isBrowser) return;
+    // Call immediately and with small delays to ensure DOM updates
+    updateMobileVideoElements();
+    setTimeout(updateMobileVideoElements, 100);
+    setTimeout(updateMobileVideoElements, 500);
     
-    setCallIncoming(false)
-    setCallActive(true)
-    setIsLocalVideoMain(false) // Ensure remote is main view initially
-    const socket = getSocket()
-    if (!socket || !remoteUser) {
-      console.error("[VideoCall] Cannot accept call: Socket or remoteUser missing.");
-      return;
-    }
-    const pc = createPeerConnection(socket, remoteUser)
-    setPeerConnection(pc)
-    try {
-      console.log("[VideoCall] Getting user media for accepting call...");
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      setLocalStream(stream)
-      stream.getTracks().forEach(track => pc.addTrack(track, stream))
-      console.log("[VideoCall] Setting remote description from pending offer...");
-      await pc.setRemoteDescription(new RTCSessionDescription(window._pendingOffer))
-      console.log("[VideoCall] Creating answer...");
-      const answer = await pc.createAnswer()
-      console.log("[VideoCall] Setting local description with answer...");
-      await pc.setLocalDescription(answer)
-      console.log("[VideoCall] Emitting call-answer to", remoteUser); // Log before emit
-      socket.emit("call-answer", { to: remoteUser, answer })
-      window._pendingOffer = null; // Clear pending offer after use
-    } catch (e) {
-      console.error("Could not accept call:", e); // Use console.error
-      alert("Could not accept call: " + e.message)
-      endCall()
-    }
-  }
+  }, [localStream, remoteStream, isLocalVideoMain, callActive])
 
-  // Decline incoming call
-  const declineCall = () => {
-    setCallIncoming(false)
-    setCallActive(false)
-    setRemoteUser(null)
-    window._pendingOffer = null
-    if (peerConnection) {
-      try { peerConnection.close() } catch {}
-      setPeerConnection(null)
-    }
-    if (localStream) {
-      try { localStream.getTracks().forEach(track => track.stop()) } catch {}
-      setLocalStream(null)
-    }
-    setRemoteStream(null)
-    // Notify the caller that the call was declined
-    const socket = getSocket()
-    if (socket && remoteUser) {
-      socket.emit("call-decline", { to: remoteUser })
-    }
-    // Also notify the other user to close their popup
-    if (socket && remoteUser) {
-      socket.emit("call-hangup", { to: remoteUser })
-    }
-  }
-
-  // End call
-  const endCall = () => {
-    if (peerConnection) {
-      try { peerConnection.close() } catch {}
-      setPeerConnection(null)
-    }
-    if (localStream) {
-      try { localStream.getTracks().forEach(track => track.stop()) } catch {}
-      setLocalStream(null)
-    }
-    setRemoteStream(null)
-    setCallActive(false)
-    setCallIncoming(false)
-    setRemoteUser(null)
-    window._pendingOffer = null
-    setIsLocalVideoMain(false) // Reset view
-    const socket = getSocket()
-    if (socket && remoteUser) {
-      socket.emit("call-hangup", { to: remoteUser })
-    }
-  }
-
-  // Create peer connection and setup handlers
+  // Create peer connection and setup handlers - completely rewritten for reliability
   const createPeerConnection = (socket, targetUserId) => {
+    console.log("[WebRTC] Creating new peer connection for", targetUserId);
+    
+    // Close any existing connection first
+    if (window._rtcPeerConnection) {
+      try {
+        window._rtcPeerConnection.close();
+      } catch (e) {
+        console.warn("[WebRTC] Error closing existing peer connection:", e);
+      }
+    }
+    
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-    })
+      iceServers: [
+        { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }
+      ]
+    });
+    
+    // Store for debugging
+    window._rtcPeerConnection = pc;
 
     // --- ICE candidate handler ---
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log(`[WebRTC] Sending ICE candidate to ${targetUserId}:`, event.candidate);
-        socket.emit("call-ice-candidate", { to: targetUserId, candidate: event.candidate })
-      }
-    }
-
-    // --- Fix: Always create a new MediaStream for remoteStream ---
-    pc.ontrack = (event) => {
-      console.log("[WebRTC] Received remote track:", event.track.kind, "Stream IDs:", event.streams.map(s => s.id));
-      // Always create a new MediaStream from all tracks in event.streams[0]
-      if (event.streams && event.streams[0]) {
-        console.log("[WebRTC] Setting remote stream from event.streams[0]")
-        setRemoteStream(event.streams[0]);
+        console.log(`[WebRTC] Sending ICE candidate to ${targetUserId}`);
+        socket.emit("call-ice-candidate", { to: targetUserId, candidate: event.candidate });
       } else {
-        // Fallback: build stream from tracks (less common now)
-        console.warn("[WebRTC] event.streams[0] not available, creating stream manually.");
-        const inboundStream = remoteStream || new window.MediaStream(); // Reuse existing stream if possible
-        inboundStream.addTrack(event.track);
-        setRemoteStream(inboundStream);
+        console.log("[WebRTC] All ICE candidates gathered");
       }
-    }
+    };
 
-    // Add logging for connection state changes
+    // --- CRITICAL: Improved remote track handling ---
+    pc.ontrack = (event) => {
+      console.log("[WebRTC] Received remote track:", event.track.kind);
+      
+      // Always work with the event stream directly
+      if (event.streams && event.streams[0]) {
+        const stream = event.streams[0];
+        console.log(`[WebRTC] Got remote stream with ${stream.getTracks().length} tracks`);
+        
+        // Set to state
+        setRemoteStream(stream);
+        
+        // Also manually set to all video elements to ensure they update
+        if (typeof document !== 'undefined') {
+          // Find all remoteVideo elements in the component that might need this stream
+          const remoteVideos = document.querySelectorAll('.remote-video');
+          remoteVideos.forEach(video => {
+            if (video.srcObject !== stream) {
+              console.log('[WebRTC] Setting stream to remote video element');
+              video.srcObject = stream;
+              video.play().catch(e => console.warn('[WebRTC] Could not play video:', e));
+            }
+          });
+        }
+      }
+    };
+    
+    // Connection state monitoring
     pc.onconnectionstatechange = () => {
-      console.log(`[WebRTC] Connection state changed: ${pc.connectionState}`);
-      if (pc.connectionState === 'connected') {
-        console.log('[WebRTC] Peers connected!');
-      }
-      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
-        console.warn(`[WebRTC] Connection ${pc.connectionState}. Cleaning up.`);
-        // Consider adding cleanup logic here if needed, though endCall should handle it
-      }
+      console.log(`[WebRTC] Connection state changed to: ${pc.connectionState}`);
     };
-
-    // Add logging for ICE connection state changes
+    
     pc.oniceconnectionstatechange = () => {
-      console.log(`[WebRTC] ICE connection state changed: ${pc.iceConnectionState}`);
+      console.log(`[WebRTC] ICE connection state changed to: ${pc.iceConnectionState}`);
     };
 
-    return pc
+    return pc;
+  };
+
+  // Start a call - simplified and focused on reliability
+  const startCall = async (targetUserId) => {
+    if (!isBrowser) return;
+    
+    const socket = getSocket();
+    if (!socket) return;
+    
+    try {
+      console.log("[VideoCall] Getting user media for outgoing call...");
+      // Get media FIRST, before creating the peer connection
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      
+      console.log(`[VideoCall] Got local stream with ${stream.getTracks().length} tracks`);
+      setLocalStream(stream);
+      
+      // Create peer connection AFTER getting media
+      const pc = createPeerConnection(socket, targetUserId);
+      setPeerConnection(pc);
+      
+      // Set call state
+      setCallActive(true);
+      setRemoteUser(targetUserId);
+      
+      // Add tracks to peer connection - CRITICAL STEP
+      stream.getTracks().forEach(track => {
+        console.log(`[VideoCall] Adding ${track.kind} track to peer connection`);
+        pc.addTrack(track, stream);
+      });
+      
+      // Create offer
+      console.log("[VideoCall] Creating offer...");
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      
+      // Send offer
+      console.log("[VideoCall] Sending call-offer to", targetUserId);
+      socket.emit("call-offer", { to: targetUserId, offer, roomId });
+      
+    } catch (e) {
+      console.error("[VideoCall] Error starting call:", e);
+      alert("Could not start video call: " + e.message);
+      endCall();
+    }
+  };
+
+  // Accept call - simplified and focused on reliability
+  const acceptCall = async () => {
+    if (!isBrowser) return;
+    
+    try {
+      setCallIncoming(false);
+      setCallActive(true);
+      
+      const socket = getSocket();
+      if (!socket || !remoteUser || !window._pendingOffer) {
+        throw new Error("Missing required data to accept call");
+      }
+      
+      console.log("[VideoCall] Getting user media for accepting call...");
+      // Get media FIRST, before creating the peer connection
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      
+      console.log(`[VideoCall] Got local stream with ${stream.getTracks().length} tracks`);
+      setLocalStream(stream);
+      
+      // Create peer connection AFTER getting media
+      const pc = createPeerConnection(socket, remoteUser);
+      setPeerConnection(pc);
+      
+      // Add tracks to peer connection - CRITICAL STEP
+      stream.getTracks().forEach(track => {
+        console.log(`[VideoCall] Adding ${track.kind} track to peer connection`);
+        pc.addTrack(track, stream);
+      });
+      
+      // Set remote description from offer
+      console.log("[VideoCall] Setting remote description from pending offer...");
+      await pc.setRemoteDescription(new RTCSessionDescription(window._pendingOffer));
+      
+      // Create answer
+      console.log("[VideoCall] Creating answer...");
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      
+      // Send answer
+      console.log("[VideoCall] Sending call-answer to", remoteUser);
+      socket.emit("call-answer", { to: remoteUser, answer });
+      
+      // Clear pending offer
+      window._pendingOffer = null;
+      
+    } catch (e) {
+      console.error("[VideoCall] Error accepting call:", e);
+      alert("Could not accept call: " + e.message);
+      endCall();
+    }
+  };
+
+  // Decline incoming call
+  const declineCall = () => {
+    setCallIncoming(false);
+    setCallActive(false);
+    setRemoteUser(null);
+    window._pendingOffer = null;
+    
+    // Clean up any active streams (shouldn't be any for declined calls, but just in case)
+    if (localStream) {
+      try { 
+        localStream.getTracks().forEach(track => track.stop());
+      } catch (err) {
+        console.error("[Call] Error stopping tracks:", err);
+      }
+      setLocalStream(null);
+    }
+    
+    // Clean up connection if somehow it exists
+    if (peerConnection) {
+      try { peerConnection.close(); } catch {}
+      setPeerConnection(null);
+    }
+    
+    setRemoteStream(null);
+    
+    // Notify the caller that the call was declined
+    const socket = getSocket();
+    if (socket && remoteUser) {
+      socket.emit("call-decline", { to: remoteUser });
+    }
+    // Also notify the other user to close their popup
+    if (socket && remoteUser) {
+      socket.emit("call-hangup", { to: remoteUser });
+    }
   }
+
+  // Enhanced to ensure all resources are properly released
+  const endCall = () => {
+    console.log("[VideoCall] Ending call...")
+    // Clean up peer connection
+    if (peerConnection) {
+      try { 
+        // Properly remove all event handlers to prevent memory leaks
+        peerConnection.onicecandidate = null;
+        peerConnection.ontrack = null;
+        peerConnection.oniceconnectionstatechange = null;
+        peerConnection.onconnectionstatechange = null;
+        peerConnection.close(); 
+      } catch (err) {
+        console.error("[VideoCall] Error closing peer connection:", err)
+      }
+      setPeerConnection(null)
+    }
+    
+    // Stop all tracks in local stream
+    if (localStream) {
+      try {
+        localStream.getTracks().forEach(track => {
+          console.log(`[VideoCall] Stopping ${track.kind} track`)
+          track.stop()
+        })
+      } catch (err) {
+        console.error("[VideoCall] Error stopping local tracks:", err)
+      }
+      setLocalStream(null)
+    }
+    
+    // Clean up video elements
+    if (mobileLocalVideoRef.current) {
+      mobileLocalVideoRef.current.srcObject = null;
+    }
+    
+    if (mobileRemoteVideoRef.current) {
+      mobileRemoteVideoRef.current.srcObject = null;
+    }
+    
+    // Clear remote stream
+    setRemoteStream(null)
+    setCallActive(false)
+    setCallIncoming(false)
+    setRemoteUser(null)
+    window._pendingOffer = null
+    setIsLocalVideoMain(false); // Reset view
+    
+    // Notify the other user
+    const socket = getSocket();
+    if (socket && remoteUser) {
+      socket.emit("call-hangup", { to: remoteUser });
+    }
+  }
+
+  // Add cleanup on component unmount for safety
+  useEffect(() => {
+    return () => {
+      // Clean up any active streams to prevent memory leaks
+      if (localStream) {
+        try {
+          const tracks = localStream.getTracks();
+          tracks.forEach(track => track.stop());
+        } catch (err) {
+          console.error("[Cleanup] Error stopping tracks on unmount:", err);
+        }
+      }
+      // Close any active peer connection
+      if (peerConnection) {
+        try { peerConnection.close(); } catch {}
+      }
+    };
+  }, [localStream, peerConnection]);
 
   // --- UseEffects ---
 
@@ -499,27 +670,46 @@ const ChatRoomPage = ({ roomId: propRoomId }) => {
 
   useEffect(() => {
     // Assign streams to mobile video elements when they become available or view switches
-    const mainVideoEl = isLocalVideoMain ? mobileLocalVideoRef.current : mobileRemoteVideoRef.current
-    const floatingVideoEl = isLocalVideoMain ? mobileRemoteVideoRef.current : mobileLocalVideoRef.current
-    const mainStream = isLocalVideoMain ? localStream : remoteStream
-    const floatingStream = isLocalVideoMain ? remoteStream : localStream
+    const updateMobileVideoElements = () => {
+      console.log("[ChatRoomPage] Updating mobile video elements. Local:", !!localStream, "Remote:", !!remoteStream);
+      
+      const mainVideoEl = isLocalVideoMain ? mobileLocalVideoRef.current : mobileRemoteVideoRef.current;
+      const floatingVideoEl = isLocalVideoMain ? mobileRemoteVideoRef.current : mobileLocalVideoRef.current;
+      const mainStream = isLocalVideoMain ? localStream : remoteStream;
+      const floatingStream = isLocalVideoMain ? remoteStream : localStream;
 
-    if (mainVideoEl && mainStream && mainVideoEl.srcObject !== mainStream) {
-      mainVideoEl.srcObject = mainStream
-    }
-    if (floatingVideoEl && floatingStream && floatingVideoEl.srcObject !== floatingStream) {
-      floatingVideoEl.srcObject = floatingStream
-    }
-     // Clear srcObject if stream becomes null
-     if (mainVideoEl && !mainStream && mainVideoEl.srcObject) {
+      // Set main video
+      if (mainVideoEl && mainStream && mainVideoEl.srcObject !== mainStream) {
+        console.log("[ChatRoomPage] Setting main video srcObject");
+        mainVideoEl.srcObject = mainStream;
+        mainVideoEl.play().catch(e => console.warn("[ChatRoomPage] Could not play main video:", e));
+      }
+      
+      // Set floating video
+      if (floatingVideoEl && floatingStream && floatingVideoEl.srcObject !== floatingStream) {
+        console.log("[ChatRoomPage] Setting floating video srcObject");
+        floatingVideoEl.srcObject = floatingStream;
+        floatingVideoEl.play().catch(e => console.warn("[ChatRoomPage] Could not play floating video:", e));
+      }
+      
+      // Clear srcObject if stream becomes null
+      if (mainVideoEl && !mainStream && mainVideoEl.srcObject) {
+        console.log("[ChatRoomPage] Clearing main video srcObject");
         mainVideoEl.srcObject = null;
-     }
-     if (floatingVideoEl && !floatingStream && floatingVideoEl.srcObject) {
+      }
+      
+      if (floatingVideoEl && !floatingStream && floatingVideoEl.srcObject) {
+        console.log("[ChatRoomPage] Clearing floating video srcObject");
         floatingVideoEl.srcObject = null;
-     }
-
-  }, [localStream, remoteStream, isLocalVideoMain, callActive]) // Rerun when streams or view change
-
+      }
+    };
+    
+    // Call immediately and with small delays to ensure DOM updates
+    updateMobileVideoElements();
+    setTimeout(updateMobileVideoElements, 100);
+    setTimeout(updateMobileVideoElements, 500);
+    
+  }, [localStream, remoteStream, isLocalVideoMain, callActive])
 
   useEffect(() => {
     fetchRoomDetails()
@@ -732,7 +922,7 @@ const ChatRoomPage = ({ roomId: propRoomId }) => {
   const canStartCall = room?.members?.length === 2 && otherParticipant // Enable start only for 1-on-1
 
   if (initialLoading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}><div className="loading-container">Loading room...</div></div>
+    return <div className="loading-container">Loading room...</div>
   }
 
   if (error && !room) {
@@ -1077,41 +1267,42 @@ const ChatRoomPage = ({ roomId: propRoomId }) => {
                 </div>
               </>
             )}
-             {/* Incoming Call Overlay */}
-             {callIncoming && !callActive && (
-                <div className="mobile-incoming-call-overlay">
-                   <p>Incoming call from {room?.members?.find(m => m._id === remoteUser)?.username || 'Unknown'}...</p>
-                   <div className="incoming-call-actions">
-                      <button className="btn btn-success" onClick={acceptCall}>Accept</button>
-                      <button className="btn btn-danger" onClick={declineCall}>Decline</button>
-                   </div>
-                </div>
-             )}
           </div>
+
+          {/* Mobile panel switcher */}
+          <div className="mobile-panel-switcher">
+            <button
+              className={`switcher-button ${activeMobilePanel === "youtube" ? "active" : ""}`}
+              onClick={() => setActiveMobilePanel("youtube")}
+            >
+              Video
+            </button>
+            <button
+              className={`switcher-button ${activeMobilePanel === "chat" ? "active" : ""}`}
+              onClick={() => setActiveMobilePanel("chat")}
+            >
+              Chat
+            </button>
+            <button
+              className={`switcher-button ${activeMobilePanel === "call" ? "active" : ""}`}
+              onClick={() => setActiveMobilePanel("call")}
+            >
+              Call
+            </button>
+          </div>
+
+          {/* Incoming Call Overlay */}
+          {callIncoming && !callActive && (
+            <div className="mobile-incoming-call-overlay">
+              <p>Incoming call from {room?.members?.find(m => m._id === remoteUser)?.username || 'Unknown'}...</p>
+              <div className="incoming-call-actions">
+                <button className="btn btn-success" onClick={acceptCall}>Accept</button>
+                <button className="btn btn-danger" onClick={declineCall}>Decline</button>
+              </div>
+            </div>
+          )}
         </div>
       </main>
-
-      {/* Mobile panel switcher */}
-      <div className="mobile-panel-switcher">
-        <button
-          className={`switcher-button ${activeMobilePanel === "youtube" ? "active" : ""}`}
-          onClick={() => setActiveMobilePanel("youtube")}
-        >
-          Video
-        </button>
-        <button
-          className={`switcher-button ${activeMobilePanel === "chat" ? "active" : ""}`}
-          onClick={() => setActiveMobilePanel("chat")}
-        >
-          Chat
-        </button>
-        <button
-          className={`switcher-button ${activeMobilePanel === "call" ? "active" : ""}`}
-          onClick={() => setActiveMobilePanel("call")}
-        >
-          Call
-        </button>
-      </div>
     </div>
   )
 }
