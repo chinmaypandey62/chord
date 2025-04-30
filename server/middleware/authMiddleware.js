@@ -6,18 +6,20 @@ export const protect = async (req, res, next) => {
   try {
     let token;
     
-    // Get token from Authorization header or cookies
+    // Get token from Authorization header
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
       console.log('[AuthMiddleware] Token from Authorization header:', token.substring(0, 15) + '...');
-    } else if (req.cookies && req.cookies.token) {
+    } 
+    // Or get token from cookies as fallback
+    else if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
       console.log('[AuthMiddleware] Token from cookies:', token.substring(0, 15) + '...');
     }
     
     // Check if token exists
     if (!token) {
-      console.log('[AuthMiddleware] No token found in request');
+      console.log('[AuthMiddleware] No token found in request or cookies');
       return res.status(401).json({ message: 'Not authorized, no token' });
     }
     
