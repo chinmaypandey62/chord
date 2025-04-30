@@ -2,6 +2,15 @@ import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
+// Helper function to generate JWT token - was missing!
+const generateToken = (userId, username) => {
+  return jwt.sign(
+    { id: userId, username },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+};
+
 export const register = async (req, res) => {
   try {
     const { username, email, password, name } = req.body; // Assuming 'name' is not part of the User schema based on User.js
@@ -36,11 +45,7 @@ export const register = async (req, res) => {
     console.log(`[Register] User ${savedUser.username} (${savedUser._id}) created successfully.`);
 
     // Generate JWT token
-    const token = jwt.sign(
-      { id: savedUser._id, username: savedUser.username },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' } // Consider a shorter duration for production
-    );
+    const token = generateToken(savedUser._id, savedUser.username);
 
     // Set cookie
     res.cookie('token', token, {
@@ -80,8 +85,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { usernameOrEmail, password } = req.body;
-    console.log(`[Login] Attempt for: ${usernameOrEmail}`);
-
+    
     if (!usernameOrEmail || !password) {
       console.log('[Login] Failed: Missing username/email or password');
       return res.status(400).json({ message: 'Username/email and password are required' });
@@ -105,42 +109,37 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' }); // Use generic message
     }
 
-    console.log(`[Login] Success for ${user.username} (${user._id})`);
-
     // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, username: user.username }, // Payload
-      process.env.JWT_SECRET,                     // Secret
-      { expiresIn: '7d' }                         // Options
-    );
-
-    // Set cookie
+    const token = generateToken(user._id, user.username);
+    
+    // Set token in cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
-
-    // Return user info (excluding password) and token
-    return res.status(200).json({
-      message: 'Login successful',
-      token,
+    
+    console.log(`[Login] Success for ${user.username} (${user._id})`);
+    console.log(`[Login] Token set in cookie: ${token.substring(0, 15)}...`);
+    
+    // Return user data and token
+    res.status(200).json({
       user: {
         _id: user._id,
         username: user.username,
         email: user.email,
         profilePicture: user.profilePicture,
-        status: user.status,         // <-- Include status
-        lastSeen: user.lastSeen,     // <-- Include lastSeen
+        status: user.status || 'online',
+        lastSeen: user.lastSeen,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       },
+      token
     });
-
   } catch (error) {
-    console.error('[Login] Login error:', error.message, error.stack);
-    return res.status(500).json({ message: 'Server error during login', error: error.message });
+    console.error(`[Login] Error:`, error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -156,51 +155,64 @@ export const logout = (req, res) => {
 };
 
 export const checkAuth = async (req, res) => {
+  // Remove the token extraction part - rely on middleware
   try {
-    const token = req.cookies.token;
-    console.log(`[CheckAuth] Checking token from cookie: ${token ? 'Found' : 'Not Found'}`);
-
-    if (!token) {
-      return res.status(401).json({ message: 'Not authenticated', isAuthenticated: false });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log(`[CheckAuth] Token decoded for user ID: ${decoded.id}`);
-
-    // Find user by ID from token, excluding password
-    const user = await User.findById(decoded.id).select('-password');
-
-    if (!user) {
-      console.log(`[CheckAuth] Failed: User not found for ID ${decoded.id}`);
-      // Clear potentially invalid cookie
-      res.clearCookie('token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
-      return res.status(404).json({ message: 'User not found', isAuthenticated: false });
-    }
-
-    console.log(`[CheckAuth] Success: User ${user.username} (${user._id}) authenticated.`);
+    // The protect middleware has already verified the token
+    // and attached the user to req.user
+    const user = req.user;
+    
+    console.log(`[CheckAuth] User authenticated through middleware: ${user._id}`);
+    
     // Return authentication status and user info
-    res.status(200).json({ // Use 200 OK
+    res.status(200).json({
       isAuthenticated: true,
       user: {
         _id: user._id,
         username: user.username,
         email: user.email,
         profilePicture: user.profilePicture,
-        status: user.status,         // <-- Include status
-        lastSeen: user.lastSeen,     // <-- Include lastSeen
+        status: user.status,         
+        lastSeen: user.lastSeen,     
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }
     });
   } catch (error) {
     console.error('[CheckAuth] Auth check error:', error.name, error.message);
-    // Clear potentially invalid cookie if token verification fails
-    res.clearCookie('token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
-    // Differentiate between expired token and other errors if needed
-    if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Session expired', isAuthenticated: false, reason: 'expired' });
-    }
-    return res.status(401).json({ message: 'Invalid token', isAuthenticated: false, reason: 'invalid' });
+    return res.status(401).json({ 
+      message: 'Authentication error', 
+      isAuthenticated: false, 
+      error: error.message 
+    });
+  }
+};
+
+export const verifyToken = async (req, res) => {
+  try {
+    // The protect middleware has already verified the token
+    // and attached the user to req.user by this point
+    
+    // Log successful authentication
+    console.log(`[Auth Verify] User ${req.user._id} successfully verified`);
+    
+    // Return success response
+    return res.status(200).json({
+      success: true,
+      message: 'Token is valid',
+      user: {
+        _id: req.user._id,
+        username: req.user.username,
+        email: req.user.email,
+        profilePicture: req.user.profilePicture,
+        status: req.user.status,
+        lastSeen: req.user.lastSeen
+      }
+    });
+  } catch (error) {
+    console.error('[Auth Verify] Error:', error);
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token'
+    });
   }
 };
