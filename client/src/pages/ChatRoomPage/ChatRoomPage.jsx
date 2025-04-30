@@ -732,7 +732,7 @@ const ChatRoomPage = ({ roomId: propRoomId }) => {
   const canStartCall = room?.members?.length === 2 && otherParticipant // Enable start only for 1-on-1
 
   if (initialLoading) {
-    return <div className="loading-container">Loading room...</div>
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}><div className="loading-container">Loading room...</div></div>
   }
 
   if (error && !room) {

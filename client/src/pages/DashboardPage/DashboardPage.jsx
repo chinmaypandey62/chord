@@ -43,7 +43,7 @@ const DashboardPage = () => {
   // Render loading state
   if (loading) {
     return (
-      <div className="loading-container">
+      <div className="loading-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}>
         <div className="loading-spinner"></div>
         <p>Loading your dashboard...</p>
       </div>

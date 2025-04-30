@@ -1,23 +1,11 @@
 import axios from 'axios';
 
-// Determine base URL from environment variables
-const getBaseUrl = () => {
-  if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_LOCAL_API_URL || 'http://localhost:5000/api';
-  }
-  
-  // Use the production URL when not on localhost
-  if (window.location.hostname !== 'localhost') {
-    return process.env.NEXT_PUBLIC_API_URL || 'https://app-chord-api.onrender.com/api';
-  }
-  
-  // Default to local URL for localhost
-  return process.env.NEXT_PUBLIC_LOCAL_API_URL || 'http://localhost:5000/api';
-};
+// Always use the hosted backend URL
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Create axios instance with dynamic base URL
+// Create axios instance with the hosted backend URL
 const instance = axios.create({
-  baseURL: getBaseUrl(),
+  baseURL: `${API_URL}/api`,
   timeout: 10000,
   withCredentials: true // Important for cookies
 });
