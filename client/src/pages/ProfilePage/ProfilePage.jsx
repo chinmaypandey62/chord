@@ -122,7 +122,6 @@ const ProfilePage = () => {
   if (!isClient || authLoading) {
     return (
       <div className="profile-page loading-state">
-        <Navbar />
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 60px)' }}>
            <p>Loading...</p>
         </div>

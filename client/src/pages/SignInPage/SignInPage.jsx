@@ -125,7 +125,6 @@ const SignInPage = () => {
   if (!isClient || authLoading || user) {
     return (
       <div className="signin-page loading-state">
-        <Navbar />
         <div className="loading-spinner"></div>
         <p>Loading...</p>
       </div>
